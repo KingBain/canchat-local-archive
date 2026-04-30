@@ -15,7 +15,8 @@ const CANDIDATES = {
     "/chats/{id}"
   ],
   create: [
-    "/api/v1/chats/",     // Added trailing slash
+    "/api/v1/chats/new",
+    "/api/v1/chats/",
     "/api/v1/chats", 
     "/api/chats", 
     "/api/conversations", 

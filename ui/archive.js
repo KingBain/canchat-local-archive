@@ -65,15 +65,52 @@ function download(name, content) {
 }
 
 async function restoreOne(chat) {
-  const created = await createChat(chat.detail || chat);
+  const oldDetail = chat.detail || {};
+  
+  // 1. Prepare the payload based on the exact format you found.
+  // We leave `id: ""` because the /new endpoint expects it blank and will generate a new one.
+  const payload = {
+    chat: {
+      ...oldDetail, // Inject all the old messages, models, and history
+      id: "",
+      title: `[Restored] ${chat.title || oldDetail.title || "Untitled"}`,
+      timestamp: Date.now() // The payload expects milliseconds here
+    }
+  };
+
+  // 2. Send it to the server (/api/v1/chats/new)
+  const created = await createChat(payload);
+  
+  // 3. The server response should contain the newly generated ID
+  const remoteId = created?.id || created?.chatId || created?.chat?.id;
+  if (!remoteId) {
+    throw new Error("Restore succeeded, but the server didn't return a new Chat ID.");
+  }
+
+  // 4. Save the mapping so we know which local ID turned into which remote ID
   await withStore("restore_mappings", "readwrite", (store) =>
-    store.put({ localId: chat.id, remoteId: created?.id || created?.chatId || null, origin: chat.origin, restoredAt: new Date().toISOString() })
+    store.put({ localId: chat.id, remoteId: remoteId, origin: chat.origin, restoredAt: new Date().toISOString() })
   );
-  chat.restored = true;
-  chat.localOnly = false;
-  chat.remotePresent = true;
-  await withStore("chats", "readwrite", (store) => store.put(chat));
-  return created;
+
+  // 5. Update our local database. 
+  // Because IndexedDB uses "id" as the primary key, we delete the old local record and save it under the new active ID.
+  const newChatRecord = {
+    ...chat,
+    id: remoteId,
+    title: payload.chat.title,
+    updatedAt: new Date().toISOString(),
+    restored: true,
+    localOnly: false,
+    remotePresent: true,
+    detail: { ...oldDetail, id: remoteId } // Update the inner detail ID for future backups
+  };
+
+  await withStore("chats", "readwrite", (store) => {
+    store.delete(chat.id); // Delete old local-only ID
+    return store.put(newChatRecord); // Save new restored ID
+  });
+
+  return { id: remoteId };
 }
 
 async function render() {
