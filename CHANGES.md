@@ -62,3 +62,14 @@ Initialized repository planning baseline with three root documents:
 ### Follow-ups
 - Add feature-level entries as implementation begins.
 - Record any security/governance-impacting decisions in future changes.
+
+## 2026-04-30 — Relax list discovery validation to endpoint reachability
+
+Adjusted list endpoint discovery to treat a successful HTTP response as discovery success, even when JSON parsing fails or the payload shape is not one of the known list schemas.
+
+- `src/api.js` now accepts 2xx list candidate responses as discovered endpoints when response parsing/shape validation is inconclusive.
+- Added debug metadata indicating whether the response parsed as JSON and when an unknown shape is accepted.
+
+Why
+- Some CANChat/Open WebUI forks expose valid list routes with variant payload contracts, causing false negatives during Save & Test endpoint discovery.
+
