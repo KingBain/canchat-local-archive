@@ -1,6 +1,6 @@
 import { withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
-import { createChat } from "../src/api.js";
+import { createChat, fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 
 const app = document.querySelector("#app");
@@ -22,8 +22,29 @@ async function getChats(origin) {
 
 function statusOf(chat) {
   if (chat.restored) return "restored";
-  if (chat.localOnly) return "archived locally";
-  return "still on CANChat";
+  if (chat.remotePresent === false || chat.localOnly) return "archived locally";
+  if (chat.remotePresent === true) return "still on CANChat";
+  return "archived locally";
+}
+
+
+async function reconcileRemotePresence(chats) {
+  const unknownPresenceChats = chats.filter((chat) => !chat.restored && !chat.localOnly && chat.remotePresent !== true && chat.remotePresent !== false);
+  if (!unknownPresenceChats.length) return;
+
+  try {
+    const remoteChats = await fetchChatList();
+    const remoteIds = new Set(remoteChats.map((chat) => String(chat.id)).filter(Boolean));
+
+    await Promise.all(
+      unknownPresenceChats.map(async (chat) => {
+        chat.remotePresent = remoteIds.has(String(chat.id));
+        await withStore("chats", "readwrite", (store) => store.put(chat));
+      })
+    );
+  } catch {
+    // Leave unknown status unchanged on network or auth failures.
+  }
 }
 
 async function deleteChatLocal(id) {
@@ -62,6 +83,8 @@ async function render() {
   }
 
   const chats = await getChats(origin);
+
+  reconcileRemotePresence(chats).then(() => paint());
 
   app.innerHTML = `
     <header>
