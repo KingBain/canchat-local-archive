@@ -20,8 +20,8 @@ Bootstrap planning and scope definition.
 
 ## Blockers
 - API endpoint and route compatibility across CANChat forks is unvalidated for v0.1.
-  - Discovery currently probes only: `/api/chats`, `/api/conversations`, `/chats` for list and create operations.
-  - Detail route currently assumes one of: `/api/chats/{id}`, `/api/conversations/{id}`, `/chats/{id}`.
+  - Discovery currently probes: `/api/v1/chats`, `/api/chats`, `/api/conversations`, `/chats` for list and create operations (v1-first).
+  - Detail route currently assumes one of: `/api/v1/chats/{id}`, `/api/chats/{id}`, `/api/conversations/{id}`, `/chats/{id}`.
   - UI routing assumption for opening chats is `/c/{chat_id}`; this may differ by fork.
   - Blocker impact: manual test steps that depend on live chat listing/detail creation cannot be marked `pass` until fork-specific endpoint and route validation is completed.
 
@@ -40,8 +40,8 @@ Bootstrap planning and scope definition.
 | V0.1-M6 | Validate UI route pattern for opening a chat (`/c/{chat_id}`) end-to-end. | fail | Current route pattern is an assumption only; no successful fork validation recorded yet. |
 
 ## API and routing assumptions (to be updated after validation)
-- Assumption A1: List endpoint is discoverable via one of `/api/chats`, `/api/conversations`, or `/chats`.
-- Assumption A2: Detail endpoint accepts `{id}` under one of `/api/chats/{id}`, `/api/conversations/{id}`, or `/chats/{id}`.
+- Assumption A1: List endpoint is discoverable via one of `/api/v1/chats`, `/api/chats`, `/api/conversations`, or `/chats`.
+- Assumption A2: Detail endpoint accepts `{id}` under one of `/api/v1/chats/{id}`, `/api/chats/{id}`, `/api/conversations/{id}`, or `/chats/{id}`.
 - Assumption A3: Create endpoint is available at the same path family as list endpoints.
 - Assumption A4: Chat UI deep-link pattern is `/c/{chat_id}`.
 
