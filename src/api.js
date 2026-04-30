@@ -1,7 +1,14 @@
 import { getSettings, normalizeBaseUrl, updateSettings } from "./settings.js";
 
 const CANDIDATES = {
-  list: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
+  list: [
+    "/api/v1/chats",
+    "/api/chats",
+    "/api/conversations",
+    "/api/v1/chat/list",
+    "/api/chat/list",
+    "/chats",
+  ],
   detail: ["/api/v1/chats/{id}", "/api/chats/{id}", "/api/conversations/{id}", "/chats/{id}"],
   create: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
 };
@@ -48,7 +55,13 @@ export async function authFetch(baseUrl, path, init = {}) {
 
 function looksLikeList(body) {
   if (Array.isArray(body)) return true;
-  return Array.isArray(body?.items) || Array.isArray(body?.chats) || Array.isArray(body?.conversations);
+  return (
+    Array.isArray(body?.items) ||
+    Array.isArray(body?.chats) ||
+    Array.isArray(body?.conversations) ||
+    Array.isArray(body?.data) ||
+    Array.isArray(body?.results)
+  );
 }
 
 function looksLikeDetail(body) {
@@ -97,7 +110,7 @@ export async function discoverEndpoints(force = false) {
 function normalizeList(body) {
   const items = Array.isArray(body)
     ? body
-    : body.items || body.chats || body.conversations || [];
+    : body.items || body.chats || body.conversations || body.data || body.results || [];
   if (!Array.isArray(items)) throw new Error("List response shape mismatch: expected an array of chats.");
   return items;
 }
