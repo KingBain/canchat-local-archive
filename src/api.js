@@ -68,6 +68,16 @@ function looksLikeDetail(body) {
   return Boolean(body && (body.id || body.chatId || body.conversationId));
 }
 
+async function parseJsonResponse(res, context) {
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    const snippet = text.slice(0, 120).replace(/\s+/g, " ");
+    throw new Error(`${context} returned non-JSON response: ${snippet || "[empty response]"}`);
+  }
+}
+
 export async function discoverEndpoints(force = false) {
   const settings = await getSettings();
   if (!settings.baseUrl) throw new Error("No base URL configured.");
@@ -81,18 +91,10 @@ export async function discoverEndpoints(force = false) {
     try {
       debugLog("Trying list endpoint candidate", { path });
       const res = await authFetch(settings.baseUrl, path);
-      let body = null;
-      let parsedAsJson = false;
-      try {
-        body = await res.json();
-        parsedAsJson = true;
-      } catch {
-        // Some CANChat forks return non-JSON for list routes; treat 2xx as reachable.
-      }
-
-      if (!parsedAsJson || looksLikeList(body)) {
+      const body = await parseJsonResponse(res, `List endpoint ${path}`);
+      if (looksLikeList(body)) {
         discovered.list = path;
-        debugLog("List endpoint discovered", { path, parsedAsJson });
+        debugLog("List endpoint discovered", { path, parsedAsJson: true });
         break;
       }
 
@@ -135,7 +137,7 @@ export async function fetchChatList() {
   const settings = await getSettings();
   const endpoints = await discoverEndpoints();
   const res = await authFetch(settings.baseUrl, endpoints.list);
-  const body = await res.json();
+  const body = await parseJsonResponse(res, `List endpoint ${endpoints.list}`);
   return normalizeList(body);
 }
 
@@ -144,7 +146,7 @@ export async function fetchChatDetail(id) {
   const endpoints = await discoverEndpoints();
   const path = endpoints.detail.replace("{id}", encodeURIComponent(id));
   const res = await authFetch(settings.baseUrl, path);
-  const body = await res.json();
+  const body = await parseJsonResponse(res, `Detail endpoint ${path}`);
   if (!looksLikeDetail(body)) {
     throw new Error(`Detail response shape mismatch for chat ${id}.`);
   }
@@ -158,5 +160,5 @@ export async function createChat(payload) {
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return res.json();
+  return parseJsonResponse(res, `Create endpoint ${endpoints.create}`);
 }
