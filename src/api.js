@@ -6,6 +6,15 @@ const CANDIDATES = {
   create: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
 };
 
+
+function debugLog(message, meta) {
+  if (meta === undefined) {
+    console.info(`[CANChat Archive] ${message}`);
+    return;
+  }
+  console.info(`[CANChat Archive] ${message}`, meta);
+}
+
 function formatError(status, path, text) {
   if (status === 401) return `Unauthorized (401) while calling ${path}. Please sign in on CANChat.`;
   if (status === 403) return `Forbidden (403) while calling ${path}. Verify host permissions and account access.`;
@@ -15,7 +24,10 @@ function formatError(status, path, text) {
 
 export async function authFetch(baseUrl, path, init = {}) {
   const normalized = normalizeBaseUrl(baseUrl);
-  const res = await fetch(`${normalized}${path}`, {
+  const method = init.method || "GET";
+  const url = `${normalized}${path}`;
+  debugLog("HTTP request", { method, path, url });
+  const res = await fetch(url, {
     ...init,
     credentials: "include",
     headers: {
@@ -26,9 +38,11 @@ export async function authFetch(baseUrl, path, init = {}) {
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
+    debugLog("HTTP response error", { method, path, status: res.status, statusText: res.statusText, body: text || null });
     throw new Error(formatError(res.status, path, text));
   }
 
+  debugLog("HTTP response success", { method, path, status: res.status, statusText: res.statusText });
   return res;
 }
 
@@ -48,18 +62,26 @@ export async function discoverEndpoints(force = false) {
 
   const discovered = {};
 
+  debugLog("Starting endpoint discovery", { candidates: CANDIDATES.list });
+
   for (const path of CANDIDATES.list) {
     try {
+      debugLog("Trying list endpoint candidate", { path });
       const res = await authFetch(settings.baseUrl, path);
       const body = await res.json();
       if (looksLikeList(body)) {
         discovered.list = path;
+        debugLog("List endpoint discovered", { path });
         break;
       }
-    } catch {}
+      debugLog("List candidate returned unexpected response shape", { path, keys: body && typeof body === "object" ? Object.keys(body) : null });
+    } catch (error) {
+      debugLog("List candidate failed", { path, error: error?.message || String(error) });
+    }
   }
 
   if (!discovered.list) {
+    debugLog("Endpoint discovery failed", { candidates: CANDIDATES.list });
     throw new Error("Could not discover list endpoint from known candidates.");
   }
 
@@ -67,6 +89,7 @@ export async function discoverEndpoints(force = false) {
   discovered.detail = detailTemplate;
   discovered.create = CANDIDATES.create[0];
 
+  debugLog("Endpoint discovery complete", discovered);
   await updateSettings({ discoveredEndpoints: discovered });
   return discovered;
 }
