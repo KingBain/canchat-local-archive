@@ -139,6 +139,7 @@ async function render() {
       setMessage(setupMsg, "Connected: endpoint discovery succeeded.", "success");
       await render();
     } catch (error) {
+      console.error("[CANChat Archive] Save & Test failed", error);
       setMessage(setupMsg, `Connection failed: ${error.message}`, "error");
     }
   });
