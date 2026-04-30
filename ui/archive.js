@@ -122,14 +122,14 @@ async function render() {
       .map((chat) => {
         const status = statusOf(chat);
         const snippet = JSON.stringify(chat.detail || {}).slice(0, 180).replace(/\s+/g, " ");
+        const primaryAction = chat.remotePresent ? '<button data-action="open">Open</button>' : '<button data-action="restore-open">Restore/Open</button>';
         return `
           <article class="card" data-id="${chat.id}">
             <h3>${escapeHtml(chat.title || "Untitled")}</h3>
             <p class="snippet">${escapeHtml(snippet)}</p>
             <p class="meta">Updated: ${escapeHtml(chat.updatedAt || "Unknown")} · Status: <span class="status">${status}</span></p>
             <div class="actions">
-              <button data-action="open">Open</button>
-              <button data-action="restore-open">Restore/Open</button>
+              ${primaryAction}
               <button data-action="export">Export Markdown</button>
               <button data-action="delete" class="danger">Delete local copy</button>
             </div>
