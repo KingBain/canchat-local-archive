@@ -1,1 +1,17 @@
-// TODO: implement ui/popup.css
+:root { color-scheme: light dark; }
+body { font-family: Inter, system-ui, sans-serif; margin: 0; min-width: 340px; background: #111827; color: #e5e7eb; }
+#app { padding: 12px; display: grid; gap: 12px; }
+.card { background: #1f2937; border: 1px solid #374151; border-radius: 10px; padding: 10px; }
+h2 { margin: 0 0 8px; font-size: 14px; }
+label { display: block; font-size: 12px; margin-bottom: 4px; }
+input { width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px; border: 1px solid #4b5563; background: #111827; color: #f9fafb; }
+.row,.actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+button { border: 1px solid #4f46e5; background: #4338ca; color: white; border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+button.danger { background: #991b1b; border-color: #ef4444; }
+ul { margin: 0; padding-left: 18px; }
+li { margin-bottom: 4px; font-size: 12px; }
+.message { margin: 8px 0 0; font-size: 12px; }
+.message.success { color: #86efac; }
+.message.error { color: #fca5a5; }
+.message.info { color: #bfdbfe; }
+.governance li { opacity: .9; }
