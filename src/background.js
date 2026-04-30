@@ -3,6 +3,7 @@ import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
 import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl } from "./settings.js";
 
 const runningByOrigin = new Set();
+let shutdownBackupTimer = null;
 
 async function backupOrigin(origin) {
   if (runningByOrigin.has(origin)) return;
@@ -16,10 +17,10 @@ async function backupOrigin(origin) {
       if (!id) continue;
       remoteIds.add(String(id));
       const detail = await fetchChatDetail(id);
-// Get timestamp, handling both camelCase and snake_case
+      // Get timestamp, handling both camelCase and snake_case.
       let ts = detail.updatedAt || detail.updated_at || item.updatedAt || item.updated_at;
-      // If the timestamp is in seconds (10 digits), convert to milliseconds for JS Dates
-      if (typeof ts === "number" && ts < 2000000000) ts = ts * 1000; 
+      // If the timestamp is in seconds (10 digits), convert to milliseconds for JS Dates.
+      if (typeof ts === "number" && ts < 2000000000) ts = ts * 1000;
 
       const chat = {
         id: String(id),
@@ -29,7 +30,7 @@ async function backupOrigin(origin) {
         remotePresent: true,
         detail,
       };
-      
+
       await putChat(chat);
       await putSearchDoc({
         id: chat.id,
@@ -53,6 +54,41 @@ async function backupOrigin(origin) {
     runningByOrigin.delete(origin);
   }
 }
+
+async function maybeBackupBeforeLastSessionEnds() {
+  const settings = await getSettings();
+  if (!settings.enabled || !settings.baseUrl) return;
+
+  const permission = await ensureConfiguredOriginPermission();
+  if (!permission.ok) return;
+
+  const origin = originFromBaseUrl(settings.baseUrl);
+  const canchatTabs = await chrome.tabs.query({ url: `${origin}/*` });
+
+  // If no CanChat tabs are left, this was the user's final session.
+  if (canchatTabs.length === 0) {
+    await backupOrigin(origin);
+  }
+}
+
+function scheduleShutdownBackupCheck() {
+  if (shutdownBackupTimer) clearTimeout(shutdownBackupTimer);
+  // Let Chrome finish tab/window teardown before checking tab count.
+  shutdownBackupTimer = setTimeout(() => {
+    shutdownBackupTimer = null;
+    maybeBackupBeforeLastSessionEnds().catch(() => {
+      // Intentionally ignore to avoid noisy extension errors during shutdown.
+    });
+  }, 750);
+}
+
+chrome.tabs.onRemoved.addListener(() => {
+  scheduleShutdownBackupCheck();
+});
+
+chrome.windows.onRemoved.addListener(() => {
+  scheduleShutdownBackupCheck();
+});
 
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "canchat-page-loaded") {
