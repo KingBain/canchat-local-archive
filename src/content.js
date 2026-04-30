@@ -1,1 +1,3 @@
-// TODO: implement src/content.js
+(() => {
+  chrome.runtime.sendMessage({ type: "canchat-page-loaded", href: location.href });
+})();
