@@ -66,14 +66,24 @@ function download(name, content) {
 
 async function restoreOne(chat) {
   const oldDetail = chat.detail || {};
+  const sourceChat = (oldDetail && typeof oldDetail === "object" && oldDetail.chat && typeof oldDetail.chat === "object")
+    ? oldDetail.chat
+    : oldDetail;
+
+  const normalizedChat = {
+    ...sourceChat,
+    messages: Array.isArray(sourceChat.messages) ? sourceChat.messages : [],
+    history: Array.isArray(sourceChat.history) ? sourceChat.history : [],
+    models: Array.isArray(sourceChat.models) ? sourceChat.models : [],
+  };
   
   // 1. Prepare the payload based on the exact format you found.
   // We leave `id: ""` because the /new endpoint expects it blank and will generate a new one.
   const payload = {
     chat: {
-      ...oldDetail, // Inject all the old messages, models, and history
+      ...normalizedChat, // Inject all the old messages, models, and history
       id: "",
-      title: `[Restored] ${chat.title || oldDetail.title || "Untitled"}`,
+      title: `[Restored] ${chat.title || normalizedChat.title || "Untitled"}`,
       timestamp: Date.now() // The payload expects milliseconds here
     }
   };
@@ -102,7 +112,7 @@ async function restoreOne(chat) {
     restored: true,
     localOnly: false,
     remotePresent: true,
-    detail: { ...oldDetail, id: remoteId } // Update the inner detail ID for future backups
+    detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } // Update nested payload shape for future backups
   };
 
   await withStore("chats", "readwrite", (store) => {
