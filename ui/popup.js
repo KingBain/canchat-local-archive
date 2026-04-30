@@ -146,9 +146,7 @@ async function render() {
 
   document.querySelector("#backup-btn").addEventListener("click", async () => {
     try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      if (!tab?.id) throw new Error("No active tab available.");
-      const res = await chrome.tabs.sendMessage(tab.id, { type: "canchat-page-loaded" });
+      const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
       if (!res?.ok) throw new Error(res?.error || "Backup failed.");
       await updateSettings({ lastSyncAt: new Date().toISOString() });
       setMessage(actionMsg, "Backup completed.", "success");
