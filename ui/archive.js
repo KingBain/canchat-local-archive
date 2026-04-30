@@ -29,21 +29,23 @@ function statusOf(chat) {
 
 
 async function reconcileRemotePresence(chats) {
-  const unknownPresenceChats = chats.filter((chat) => !chat.restored && !chat.localOnly && chat.remotePresent !== true && chat.remotePresent !== false);
-  if (!unknownPresenceChats.length) return;
+  const reconcilableChats = chats.filter((chat) => !chat.restored && !chat.localOnly);
+  if (!reconcilableChats.length) return;
 
   try {
     const remoteChats = await fetchChatList();
     const remoteIds = new Set(remoteChats.map((chat) => String(chat.id)).filter(Boolean));
 
     await Promise.all(
-      unknownPresenceChats.map(async (chat) => {
-        chat.remotePresent = remoteIds.has(String(chat.id));
+      reconcilableChats.map(async (chat) => {
+        const remotePresent = remoteIds.has(String(chat.id));
+        if (chat.remotePresent === remotePresent) return;
+        chat.remotePresent = remotePresent;
         await withStore("chats", "readwrite", (store) => store.put(chat));
       })
     );
   } catch {
-    // Leave unknown status unchanged on network or auth failures.
+    // Keep last known status on network or auth failures.
   }
 }
 
@@ -83,8 +85,6 @@ async function render() {
   }
 
   const chats = await getChats(origin);
-
-  reconcileRemotePresence(chats).then(() => paint());
 
   app.innerHTML = `
     <header>
@@ -178,6 +178,9 @@ async function render() {
 
   searchEl.addEventListener("input", paint);
   filterEl.addEventListener("change", paint);
+
+  paint();
+  await reconcileRemotePresence(chats);
   paint();
 }
 
