@@ -149,14 +149,14 @@ async function render() {
 
     const action = button.dataset.action;
     if (action === "open") {
-      const url = `${settings.baseUrl.replace(/\/$/, "")}/chat/${encodeURIComponent(chat.id)}`;
+      const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(chat.id)}`;
       chrome.tabs.create({ url });
     }
     if (action === "restore-open") {
       try {
         const created = chat.remotePresent ? { id: chat.id } : await restoreOne(chat);
         const remoteId = created?.id || created?.chatId || chat.id;
-        const url = `${settings.baseUrl.replace(/\/$/, "")}/chat/${encodeURIComponent(remoteId)}`;
+        const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
         chrome.tabs.create({ url });
         paint();
       } catch (error) {
