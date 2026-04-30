@@ -2,15 +2,25 @@ import { getSettings, normalizeBaseUrl, updateSettings } from "./settings.js";
 
 const CANDIDATES = {
   list: [
+    "/api/v1/chats/",     // Added trailing slash (Matches your findings)
     "/api/v1/chats",
     "/api/chats",
     "/api/conversations",
-    "/api/v1/chat/list",
-    "/api/chat/list",
     "/chats",
   ],
-  detail: ["/api/v1/chats/{id}", "/api/chats/{id}", "/api/conversations/{id}", "/chats/{id}"],
-  create: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
+  detail: [
+    "/api/v1/chats/{id}", // Matches your findings
+    "/api/chats/{id}", 
+    "/api/conversations/{id}", 
+    "/chats/{id}"
+  ],
+  create: [
+    "/api/v1/chats/",     // Added trailing slash
+    "/api/v1/chats", 
+    "/api/chats", 
+    "/api/conversations", 
+    "/chats"
+  ],
 };
 
 

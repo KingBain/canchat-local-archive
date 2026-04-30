@@ -16,14 +16,20 @@ async function backupOrigin(origin) {
       if (!id) continue;
       remoteIds.add(String(id));
       const detail = await fetchChatDetail(id);
+// Get timestamp, handling both camelCase and snake_case
+      let ts = detail.updatedAt || detail.updated_at || item.updatedAt || item.updated_at;
+      // If the timestamp is in seconds (10 digits), convert to milliseconds for JS Dates
+      if (typeof ts === "number" && ts < 2000000000) ts = ts * 1000; 
+
       const chat = {
         id: String(id),
         origin,
         title: detail.title || item.title || "Untitled",
-        updatedAt: detail.updatedAt || item.updatedAt || new Date().toISOString(),
+        updatedAt: ts ? new Date(ts).toISOString() : new Date().toISOString(),
         remotePresent: true,
         detail,
       };
+      
       await putChat(chat);
       await putSearchDoc({
         id: chat.id,
