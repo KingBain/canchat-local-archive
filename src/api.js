@@ -166,10 +166,10 @@ export async function fetchChatDetail(id) {
 
 export async function createChat(payload) {
   const settings = await getSettings();
-  const endpoints = await discoverEndpoints();
-  const res = await authFetch(settings.baseUrl, endpoints.create, {
+  const createPath = "/api/v1/chats/new";
+  const res = await authFetch(settings.baseUrl, createPath, {
     method: "POST",
     body: JSON.stringify(payload),
   });
-  return parseJsonResponse(res, `Create endpoint ${endpoints.create}`);
+  return parseJsonResponse(res, `Create endpoint ${createPath}`);
 }
