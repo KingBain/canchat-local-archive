@@ -8,7 +8,23 @@ export async function restoreAll(origin) {
   for (const chat of chats) {
     if (chat.remotePresent) continue;
     try {
-      const created = await createChat(chat.detail || chat);
+      const oldDetail = chat.detail || {};
+      const sourceChat = oldDetail?.chat && typeof oldDetail.chat === "object" ? oldDetail.chat : oldDetail;
+      const normalizedChat = {
+        ...sourceChat,
+        messages: Array.isArray(sourceChat?.messages) ? sourceChat.messages : [],
+        history: Array.isArray(sourceChat?.history) ? sourceChat.history : [],
+        models: Array.isArray(sourceChat?.models) ? sourceChat.models : [],
+      };
+
+      const created = await createChat({
+        chat: {
+          ...normalizedChat,
+          id: "",
+          title: `[Restored] ${chat.title || normalizedChat.title || "Untitled"}`,
+          timestamp: Date.now(),
+        },
+      });
       await putRestoreMapping({
         localId: chat.id,
         remoteId: created?.id || created?.chatId || null,
