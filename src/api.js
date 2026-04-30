@@ -1,9 +1,9 @@
 import { getSettings, normalizeBaseUrl, updateSettings } from "./settings.js";
 
 const CANDIDATES = {
-  list: ["/api/chats", "/api/conversations", "/chats"],
-  detail: ["/api/chats/{id}", "/api/conversations/{id}", "/chats/{id}"],
-  create: ["/api/chats", "/api/conversations", "/chats"],
+  list: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
+  detail: ["/api/v1/chats/{id}", "/api/chats/{id}", "/api/conversations/{id}", "/chats/{id}"],
+  create: ["/api/v1/chats", "/api/chats", "/api/conversations", "/chats"],
 };
 
 function formatError(status, path, text) {

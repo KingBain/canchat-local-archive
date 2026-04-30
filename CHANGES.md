@@ -1,5 +1,24 @@
 # CHANGES
 
+## 2026-04-30 — Prefer v1 CANChat/Open WebUI API candidates
+
+### Summary
+Updated endpoint discovery candidate order to prefer v1 paths first for list, detail, and create operations.
+
+### What changed
+- `src/api.js` now probes list endpoints in this order: `/api/v1/chats`, `/api/chats`, `/api/conversations`, `/chats`.
+- `src/api.js` detail templates now include `/api/v1/chats/{id}` first.
+- `src/api.js` create candidates now include `/api/v1/chats` first.
+- `ROADMAP.md` blocker and assumptions were updated to reflect v1-first probing.
+
+### Why
+The Save/Test flow was failing to discover list endpoints on environments that expose v1 routes. Prioritizing v1 improves compatibility with Open WebUI-style APIs while retaining fallbacks for non-v1 forks.
+
+### Follow-up
+- Capture fork-specific validation evidence for v1 and fallback paths in the roadmap validation log.
+- Improve endpoint discovery diagnostics by surfacing per-candidate status/errors instead of swallowing exceptions.
+
+
 ## 2026-04-30 — v0.1 manual testing matrix and fork-compatibility assumptions
 
 ### Summary
