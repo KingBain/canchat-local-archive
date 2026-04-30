@@ -81,13 +81,29 @@ export async function discoverEndpoints(force = false) {
     try {
       debugLog("Trying list endpoint candidate", { path });
       const res = await authFetch(settings.baseUrl, path);
-      const body = await res.json();
-      if (looksLikeList(body)) {
+      let body = null;
+      let parsedAsJson = false;
+      try {
+        body = await res.json();
+        parsedAsJson = true;
+      } catch {
+        // Some CANChat forks return non-JSON for list routes; treat 2xx as reachable.
+      }
+
+      if (!parsedAsJson || looksLikeList(body)) {
         discovered.list = path;
-        debugLog("List endpoint discovered", { path });
+        debugLog("List endpoint discovered", { path, parsedAsJson });
         break;
       }
-      debugLog("List candidate returned unexpected response shape", { path, keys: body && typeof body === "object" ? Object.keys(body) : null });
+
+      // If the endpoint responds successfully but with an unknown JSON shape,
+      // treat it as discovered to support fork-specific response contracts.
+      discovered.list = path;
+      debugLog("List endpoint accepted with unknown response shape", {
+        path,
+        keys: body && typeof body === "object" ? Object.keys(body) : null,
+      });
+      break;
     } catch (error) {
       debugLog("List candidate failed", { path, error: error?.message || String(error) });
     }
