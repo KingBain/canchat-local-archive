@@ -64,15 +64,31 @@ test("discoverEndpoints records failed non-JSON candidates and continues", async
   assert.match(endpoints.diagnostics[0].reason, /non-JSON/);
 });
 
-test("discoverEndpoints accepts unknown JSON list shapes with diagnostics", async () => {
+test("discoverEndpoints rejects unknown JSON list shapes and continues", async () => {
   installChromeStorage();
+  globalThis.fetch = async (url) => {
+    if (url === "https://chat.example.com/api/v1/chats/") return Response.json({ unexpected: true });
+    if (url === "https://chat.example.com/api/v1/chats") return Response.json({ chats: [{ chatId: "abc" }] });
+    if (url === "https://chat.example.com/api/v1/chats/abc") return Response.json({ chatId: "abc", title: "Found" });
+    return new Response("missing", { status: 404 });
+  };
+
+  const { discoverEndpoints } = await importFreshApi();
+  const endpoints = await discoverEndpoints(true);
+  assert.equal(endpoints.list, "/api/v1/chats");
+  assert.equal(endpoints.detail, "/api/v1/chats/{id}");
+  assert.equal(endpoints.diagnostics[0].status, "rejected");
+  assert.equal(endpoints.diagnostics[0].shape, "unknown");
+});
+
+test("discoverEndpoints fails when every list candidate has an unknown shape", async () => {
+  const storage = installChromeStorage();
   globalThis.fetch = async (url) => {
     if (url === "https://chat.example.com/api/v1/chats/") return Response.json({ unexpected: true });
     return new Response("missing", { status: 404 });
   };
 
   const { discoverEndpoints } = await importFreshApi();
-  const endpoints = await discoverEndpoints(true);
-  assert.equal(endpoints.list, "/api/v1/chats/");
-  assert.equal(endpoints.diagnostics[0].shape, "unknown");
+  await assert.rejects(() => discoverEndpoints(true), /Could not discover list endpoint/);
+  assert.equal(storage.settings.discoveredEndpoints, undefined);
 });

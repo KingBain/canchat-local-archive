@@ -162,22 +162,18 @@ export async function discoverEndpoints(force = false) {
         break;
       }
 
-      // If the endpoint responds successfully but with an unknown JSON shape,
-      // treat it as discovered to support fork-specific response contracts.
-      discovered.list = path;
-      listBody = body;
       diagnostics.push({
         type: "list",
         path,
-        status: "ok",
+        status: "rejected",
         shape: "unknown",
+        reason: "Response did not look like a chat list.",
         keys: body && typeof body === "object" ? Object.keys(body) : null,
       });
-      debugLog("List endpoint accepted with unknown response shape", {
+      debugLog("List endpoint rejected with unknown response shape", {
         path,
         keys: body && typeof body === "object" ? Object.keys(body) : null,
       });
-      break;
     } catch (error) {
       diagnostics.push({ type: "list", path, status: "error", reason: error?.message || String(error) });
       debugLog("List candidate failed", { path, error: error?.message || String(error) });
