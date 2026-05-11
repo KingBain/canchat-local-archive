@@ -1,25 +1,52 @@
-import en from "../locales/en.json" assert { type: "json" };
-import fr from "../locales/fr.json" assert { type: "json" };
 import { getSettings, updateSettings } from "./settings.js";
 
-const BUILTIN_LOCALES = { en, fr };
+// Load manifest or map files dynamically
+const BUILTIN_LOCALES = ["en", "fr"];
 
 function deepGet(obj, path) {
   return path.split(".").reduce((acc, k) => (acc && Object.prototype.hasOwnProperty.call(acc, k) ? acc[k] : undefined), obj);
+}
+
+async function loadLocaleFile(locale) {
+  try {
+    const response = await fetch(chrome.runtime.getURL(`locales/${locale}.json`));
+    return await response.json();
+  } catch (e) {
+    console.error(`Failed to load locale: ${locale}`, e);
+    return null;
+  }
 }
 
 export async function getI18nContext() {
   const settings = await getSettings();
   const locale = settings.locale || "en";
   const customLocales = settings.customLocales || {};
-  const dict = customLocales[locale] || BUILTIN_LOCALES[locale] || BUILTIN_LOCALES.en;
+
+  // Load the dictionary: check custom storage first, then fetch file
+  let dict = customLocales[locale];
+  if (!dict) {
+    dict = await loadLocaleFile(locale);
+  }
+  
+  // Fallback to English if current fails
+  if (!dict) {
+    dict = await loadLocaleFile("en");
+  }
 
   const t = (key, vars = {}) => {
-    const template = deepGet(dict, key) ?? deepGet(BUILTIN_LOCALES.en, key) ?? key;
+    const template = deepGet(dict, key) ?? key;
     return String(template).replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? `{${name}}`));
   };
 
-  return { locale, customLocales, t, locales: { ...BUILTIN_LOCALES, ...customLocales } };
+  // Build the list of available locales (builtin + custom keys)
+  const availableLocales = new Set([...BUILTIN_LOCALES, ...Object.keys(customLocales)]);
+
+  return { 
+    locale, 
+    customLocales, 
+    t, 
+    locales: Array.from(availableLocales) 
+  };
 }
 
 export async function setLocale(locale) {
