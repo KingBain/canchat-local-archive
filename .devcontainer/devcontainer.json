@@ -1,6 +1,8 @@
 {
   "name": "CANChat Local Archive",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-22-bookworm",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
   "postCreateCommand": "npm ci",
   "customizations": {
     "vscode": {
