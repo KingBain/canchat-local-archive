@@ -76,3 +76,56 @@ export async function putRestoreMapping(mapping) {
 export async function putSyncMeta(entry) {
   return withStore("sync_meta", "readwrite", (store) => promisify(store.put(entry)));
 }
+
+export async function exportFullDatabase() {
+  const db = await openDb();
+  const stores = ["chats", "search_docs", "restore_mappings", "sync_meta"];
+  const data = {};
+
+  for (const storeName of stores) {
+    data[storeName] = await new Promise((resolve, reject) => {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).getAll();
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  db.close();
+  
+  return JSON.stringify({ 
+    version: DB_VERSION, 
+    exportedAt: new Date().toISOString(), 
+    data 
+  }, null, 2);
+}
+
+export async function importFullDatabase(jsonData) {
+  const parsed = JSON.parse(jsonData);
+  if (!parsed || !parsed.data) {
+    throw new Error("Invalid backup file format. Missing 'data' object.");
+  }
+
+  const db = await openDb();
+  const stores = ["chats", "search_docs", "restore_mappings", "sync_meta"];
+
+  return new Promise((resolve, reject) => {
+    // Open a single transaction for all stores
+    const tx = db.transaction(stores, "readwrite");
+    
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+    tx.onerror = () => reject(tx.error);
+
+    // Loop through the stores and "upsert" (update or insert) every record
+    for (const storeName of stores) {
+      if (Array.isArray(parsed.data[storeName])) {
+        const store = tx.objectStore(storeName);
+        for (const item of parsed.data[storeName]) {
+          store.put(item); 
+        }
+      }
+    }
+  });
+}

@@ -1,5 +1,5 @@
 import { discoverEndpoints } from "../src/api.js";
-import { getChatsByOrigin } from "../src/db.js";
+import { getChatsByOrigin, exportFullDatabase, importFullDatabase } from "../src/db.js";
 import { exportAllChatsJson } from "../src/export.js";
 import {
   ensureConfiguredOriginPermission,
@@ -42,34 +42,23 @@ async function clearArchive(origin) {
 
   await new Promise((resolve, reject) => {
     const tx = db.transaction(["chats", "search_docs", "restore_mappings", "sync_meta"], "readwrite");
-    tx.objectStore("chats").index("by_origin").openCursor(origin).onsuccess = (e) => {
-      const cursor = e.target.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
-      }
+    
+    // Helper to clear records matching the origin
+    const clearOrigin = (storeName) => {
+      tx.objectStore(storeName).index("by_origin").openCursor(origin).onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          cursor.delete();
+          cursor.continue();
+        }
+      };
     };
-    tx.objectStore("search_docs").index("by_origin").openCursor(origin).onsuccess = (e) => {
-      const cursor = e.target.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
-      }
-    };
-    tx.objectStore("restore_mappings").index("by_origin").openCursor(origin).onsuccess = (e) => {
-      const cursor = e.target.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
-      }
-    };
-    tx.objectStore("sync_meta").index("by_origin").openCursor(origin).onsuccess = (e) => {
-      const cursor = e.target.result;
-      if (cursor) {
-        cursor.delete();
-        cursor.continue();
-      }
-    };
+
+    clearOrigin("chats");
+    clearOrigin("search_docs");
+    clearOrigin("restore_mappings");
+    clearOrigin("sync_meta");
+
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
@@ -107,12 +96,22 @@ async function render() {
     <section class="card">
       <h2>Actions</h2>
       <div class="actions">
-        <button id="backup-btn">Backup now</button>
+        <button id="backup-btn">Sync Now</button>
         <button id="open-archive-btn">Open archive page</button>
-        <button id="export-json-btn">Export JSON</button>
+        <button id="export-json-btn">Export JSON (Origin only)</button>
         <button class="danger" id="delete-btn">Delete archive</button>
       </div>
       <p id="action-msg" class="message info"></p>
+    </section>
+
+    <section class="card">
+      <h2>Database Management</h2>
+      <div class="actions">
+        <button id="export-db-btn">Export Full DB Backup</button>
+        <button id="import-db-btn">Import DB Backup</button>
+        <input type="file" id="import-file" accept=".json" style="display: none;" />
+      </div>
+      <p id="db-msg" class="message info">Use this to move your archive to another computer/browser.</p>
     </section>
 
     <section class="card governance">
@@ -127,7 +126,9 @@ async function render() {
 
   const setupMsg = document.querySelector("#setup-msg");
   const actionMsg = document.querySelector("#action-msg");
+  const dbMsg = document.querySelector("#db-msg");
 
+  // --- SETUP ---
   document.querySelector("#save-btn").addEventListener("click", async () => {
     const input = document.querySelector("#base-url").value;
     try {
@@ -144,6 +145,7 @@ async function render() {
     }
   });
 
+  // --- ACTIONS ---
   document.querySelector("#backup-btn").addEventListener("click", async () => {
     try {
       const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
@@ -182,6 +184,45 @@ async function render() {
       await render();
     } catch (error) {
       setMessage(actionMsg, `Delete failed: ${error.message}`, "error");
+    }
+  });
+
+  // --- DATABASE MANAGEMENT ---
+  document.querySelector("#export-db-btn").addEventListener("click", async () => {
+    try {
+      setMessage(dbMsg, "Generating backup...", "info");
+      const dbJson = await exportFullDatabase();
+      downloadText(`canchat-full-backup-${Date.now()}.json`, dbJson);
+      setMessage(dbMsg, "Database backup downloaded successfully.", "success");
+    } catch (error) {
+      setMessage(dbMsg, `Export failed: ${error.message}`, "error");
+    }
+  });
+
+  document.querySelector("#import-db-btn").addEventListener("click", () => {
+    // Triggers the hidden file input
+    document.querySelector("#import-file").click(); 
+  });
+
+  document.querySelector("#import-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+      setMessage(dbMsg, "Importing database... do not close this window.", "info");
+      
+      const text = await file.text();
+      await importFullDatabase(text);
+      
+      setMessage(dbMsg, "Database imported successfully!", "success");
+      
+      // Clear the file input so it can be used again
+      event.target.value = ''; 
+      
+      // Re-render the UI to show the updated chat counts
+      await render();
+    } catch (error) {
+      setMessage(dbMsg, `Import failed: ${error.message}`, "error");
     }
   });
 }
