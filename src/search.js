@@ -1,10 +1,10 @@
 import { getAllSearchDocs, withStore } from "./db.js";
 
-function includesAllTerms(text, terms) {
+export function includesAllTerms(text, terms) {
   return terms.every((t) => text.includes(t));
 }
 
-function snippet(text, terms) {
+export function snippet(text, terms) {
   const idx = terms.map((t) => text.indexOf(t)).filter((i) => i >= 0).sort((a, b) => a - b)[0] ?? 0;
   return text.slice(Math.max(0, idx - 60), idx + 140).replace(/\s+/g, " ").trim();
 }

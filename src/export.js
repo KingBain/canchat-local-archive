@@ -1,6 +1,6 @@
 import { getChatsByOrigin } from "./db.js";
 
-function stringifyContent(content) {
+export function stringifyContent(content) {
   if (typeof content === "string") return content;
   if (content == null) return "";
   if (Array.isArray(content)) {
@@ -26,7 +26,7 @@ function stringifyContent(content) {
   return String(content);
 }
 
-function extractMessages(chat) {
+export function extractMessages(chat) {
   const containers = [chat?.detail, chat, chat?.detail?.chat].filter(Boolean);
   const seen = new Set();
   const messages = [];
@@ -68,7 +68,7 @@ function extractMessages(chat) {
   return unique;
 }
 
-function toMarkdown(chat) {
+export function toMarkdown(chat) {
   const lines = [`# ${chat.title || "Untitled"}`, "", `- Chat ID: ${chat.id}`, `- Updated: ${chat.updatedAt || ""}`, ""];
   const messages = extractMessages(chat);
   for (const m of messages) {
