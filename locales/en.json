@@ -1,0 +1,59 @@
+{
+  "common": {
+    "never": "Never",
+    "unknown": "Unknown",
+    "untitled": "Untitled"
+  },
+  "popup": {
+    "setup": "Setup",
+    "urlLabel": "CANChat URL",
+    "saveTest": "Save & Test",
+    "configured": "Configured",
+    "notConfigured": "Not configured",
+    "connectionStatus": "Connection status: {status}",
+    "status": "Status",
+    "configuredOrigin": "Configured origin:",
+    "notSet": "Not set",
+    "lastSync": "Last sync:",
+    "archivedChats": "Archived chats:",
+    "localOnlyChats": "Local-only chats:",
+    "actions": "Actions",
+    "syncNow": "Sync Now",
+    "openArchive": "Open archive page",
+    "exportJson": "Export JSON (Origin only)",
+    "deleteArchive": "Delete archive",
+    "dbMgmt": "Database Management",
+    "exportDb": "Export Full DB Backup",
+    "importDb": "Import DB Backup",
+    "dbHelp": "Use this to move your archive to another computer/browser.",
+    "language": "Language",
+    "languageLabel": "Active language",
+    "importLanguage": "Import language file",
+    "governance": "Local archive governance",
+    "msg": {
+      "connected": "Connected: endpoint discovery succeeded.",
+      "backupCompleted": "Backup completed.",
+      "exported": "Exported JSON archive.",
+      "deleted": "Deleted local archive.",
+      "genBackup": "Generating backup...",
+      "dbDownloadOk": "Database backup downloaded successfully.",
+      "dbImporting": "Importing database... do not close this window.",
+      "dbImportOk": "Database imported successfully!",
+      "noArchive": "No configured archive to delete.",
+      "confirmDelete": "Delete all local archived data for this origin?"
+    }
+  },
+  "archive": {
+    "configureFirst": "Configure CANChat URL in popup before using archive.",
+    "title": "CANChat Archive",
+    "searchPlaceholder": "Search title and conversation history...",
+    "all": "All",
+    "still": "Still on CANChat",
+    "archived": "Archived locally",
+    "restored": "Restored"
+  },
+  "sidebar": {
+    "configureFirst": "Configure CANChat URL in popup first.",
+    "empty": "No local archived chats available."
+  }
+}

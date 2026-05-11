@@ -1,0 +1,59 @@
+{
+  "common": {
+    "never": "Jamais",
+    "unknown": "Inconnu",
+    "untitled": "Sans titre"
+  },
+  "popup": {
+    "setup": "Configuration",
+    "urlLabel": "URL CANChat",
+    "saveTest": "Enregistrer et tester",
+    "configured": "Configuré",
+    "notConfigured": "Non configuré",
+    "connectionStatus": "État de connexion : {status}",
+    "status": "Statut",
+    "configuredOrigin": "Origine configurée :",
+    "notSet": "Non défini",
+    "lastSync": "Dernière synchro :",
+    "archivedChats": "Conversations archivées :",
+    "localOnlyChats": "Conversations locales seulement :",
+    "actions": "Actions",
+    "syncNow": "Synchroniser",
+    "openArchive": "Ouvrir la page d'archives",
+    "exportJson": "Exporter JSON (origine seulement)",
+    "deleteArchive": "Supprimer l'archive",
+    "dbMgmt": "Gestion de la base de données",
+    "exportDb": "Exporter la sauvegarde complète",
+    "importDb": "Importer une sauvegarde",
+    "dbHelp": "Utilisez ceci pour déplacer votre archive vers un autre ordinateur/navigateur.",
+    "language": "Langue",
+    "languageLabel": "Langue active",
+    "importLanguage": "Importer un fichier de langue",
+    "governance": "Gouvernance de l'archive locale",
+    "msg": {
+      "connected": "Connecté : découverte des points de terminaison réussie.",
+      "backupCompleted": "Sauvegarde terminée.",
+      "exported": "Archive JSON exportée.",
+      "deleted": "Archive locale supprimée.",
+      "genBackup": "Génération de la sauvegarde...",
+      "dbDownloadOk": "Sauvegarde téléchargée avec succès.",
+      "dbImporting": "Importation de la base... ne fermez pas cette fenêtre.",
+      "dbImportOk": "Base importée avec succès !",
+      "noArchive": "Aucune archive configurée à supprimer.",
+      "confirmDelete": "Supprimer toutes les données archivées locales pour cette origine ?"
+    }
+  },
+  "archive": {
+    "configureFirst": "Configurez l'URL CANChat dans la fenêtre contextuelle avant d'utiliser les archives.",
+    "title": "Archives CANChat",
+    "searchPlaceholder": "Rechercher dans le titre et l'historique...",
+    "all": "Tous",
+    "still": "Toujours sur CANChat",
+    "archived": "Archivé localement",
+    "restored": "Restauré"
+  },
+  "sidebar": {
+    "configureFirst": "Configurez d'abord l'URL CANChat dans la fenêtre contextuelle.",
+    "empty": "Aucune conversation archivée locale disponible."
+  }
+}

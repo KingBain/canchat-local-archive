@@ -2,6 +2,7 @@ import { withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
 import { createChat, fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
+import { getI18nContext } from "../src/i18n.js";
 
 const app = document.querySelector("#app");
 
@@ -197,9 +198,10 @@ async function restoreOne(chat) {
 
 async function render() {
   const settings = await getSettings();
+  const { t } = await getI18nContext();
   const origin = settings.baseUrl ? originFromBaseUrl(settings.baseUrl) : null;
   if (!origin) {
-    app.innerHTML = "<p>Configure CANChat URL in popup before using archive.</p>";
+    app.innerHTML = `<p>${t("archive.configureFirst")}</p>`;
     return;
   }
 
@@ -212,16 +214,16 @@ async function render() {
 
   app.innerHTML = `
     <header>
-      <h1>CANChat Archive</h1>
+      <h1>${t("archive.title")}</h1>
       <p class="governance">Stored locally in this browser profile. No retention bypass. Restore creates a new conversation.</p>
     </header>
     <section class="toolbar">
-      <input id="search" placeholder="Search title and conversation history..." />
+      <input id="search" placeholder="${t("archive.searchPlaceholder")}" />
       <select id="filter">
-        <option value="all">All</option>
-        <option value="still on CANChat">Still on CANChat</option>
-        <option value="archived locally">Archived locally</option>
-        <option value="restored">Restored</option>
+        <option value="all">${t("archive.all")}</option>
+        <option value="still on CANChat">${t("archive.still")}</option>
+        <option value="archived locally">${t("archive.archived")}</option>
+        <option value="restored">${t("archive.restored")}</option>
       </select>
     </section>
     <section id="results"></section>
