@@ -23,7 +23,7 @@ export async function restoreAll(origin) {
         chat: {
           ...normalizedChat,
           id: "",
-          title: `[Restored] ${chat.title || normalizedChat.title || "Untitled"}`,
+          title: chat.title || normalizedChat.title || "Untitled",
           timestamp: Date.now(),
         },
       });

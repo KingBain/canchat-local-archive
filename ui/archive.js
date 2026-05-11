@@ -29,19 +29,38 @@ function statusOf(chat) {
 
 
 async function reconcileRemotePresence(chats) {
-  const reconcilableChats = chats.filter((chat) => !chat.restored && !chat.localOnly);
-  if (!reconcilableChats.length) return;
+  if (!chats.length) return;
 
   try {
     const remoteChats = await fetchChatList();
     const remoteIds = new Set(remoteChats.map((chat) => String(chat.id)).filter(Boolean));
 
     await Promise.all(
-      reconcilableChats.map(async (chat) => {
-        const remotePresent = remoteIds.has(String(chat.id));
-        if (chat.remotePresent === remotePresent) return;
-        chat.remotePresent = remotePresent;
-        await withStore("chats", "readwrite", (store) => store.put(chat));
+      chats.map(async (chat) => {
+        const isRemotePresent = remoteIds.has(String(chat.id));
+        let changed = false;
+
+        if (chat.remotePresent !== isRemotePresent) {
+          chat.remotePresent = isRemotePresent;
+          changed = true;
+        }
+
+        // If the chat is no longer on the server, reset it to a local archive state
+        if (!isRemotePresent && (chat.restored || !chat.localOnly)) {
+          chat.restored = false;
+          chat.localOnly = true;
+          changed = true;
+        }
+
+        // If a previously local chat is found on the server, clear the localOnly flag
+        if (isRemotePresent && chat.localOnly) {
+          chat.localOnly = false;
+          changed = true;
+        }
+
+        if (changed) {
+          await withStore("chats", "readwrite", (store) => store.put(chat));
+        }
       })
     );
   } catch {
@@ -79,33 +98,28 @@ async function restoreOne(chat) {
     models: Array.isArray(sourceChat.models) ? sourceChat.models : [],
   };
   
-  // 1. Prepare the payload based on the exact format you found.
-  // We leave `id: ""` because the /new endpoint expects it blank and will generate a new one.
   const payload = {
     chat: {
-      ...normalizedChat, // Inject all the old messages, models, and history
+      ...normalizedChat,
       id: "",
-      title: `[Restored] ${chat.title || normalizedChat.title || "Untitled"}`,
-      timestamp: Date.now() // The payload expects milliseconds here
+      // REMOVED the "[Restored] " prefix here:
+      title: chat.title || normalizedChat.title || "Untitled",
+      timestamp: Date.now() 
     }
   };
 
-  // 2. Send it to the server (/api/v1/chats/new)
   const created = await createChat(payload);
   
-  // 3. The server response should contain the newly generated ID
   const remoteId = created?.id || created?.chatId || created?.chat?.id;
   if (!remoteId) {
     throw new Error("Restore succeeded, but the server didn't return a new Chat ID.");
   }
 
-  // 4. Save the mapping so we know which local ID turned into which remote ID
   await withStore("restore_mappings", "readwrite", (store) =>
     store.put({ localId: chat.id, remoteId: remoteId, origin: chat.origin, restoredAt: new Date().toISOString() })
   );
 
-  // 5. Update our local database. 
-  // Because IndexedDB uses "id" as the primary key, we delete the old local record and save it under the new active ID.
+  // 1. Create the new chat record first
   const newChatRecord = {
     ...chat,
     id: remoteId,
@@ -114,12 +128,24 @@ async function restoreOne(chat) {
     restored: true,
     localOnly: false,
     remotePresent: true,
-    detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } // Update nested payload shape for future backups
+    detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } 
   };
 
+  // 2. Save the chat
   await withStore("chats", "readwrite", (store) => {
-    store.delete(chat.id); // Delete old local-only ID
-    return store.put(newChatRecord); // Save new restored ID
+    store.delete(chat.id); 
+    return store.put(newChatRecord); 
+  });
+
+  // 3. Save the search index (Now it correctly accesses newChatRecord)
+  await withStore("search_docs", "readwrite", (store) => {
+    store.delete(chat.id); 
+    return store.put({
+      id: remoteId, 
+      origin: chat.origin,
+      titleLower: newChatRecord.title.toLowerCase(),
+      contentLower: JSON.stringify(newChatRecord.detail).toLowerCase()
+    });
   });
 
   return { id: remoteId };
