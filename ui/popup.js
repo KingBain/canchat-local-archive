@@ -9,13 +9,14 @@ import {
   requestOriginPermission,
   updateSettings,
 } from "../src/settings.js";
+import { getI18nContext, saveCustomLocale, setLocale } from "../src/i18n.js";
 
 const app = document.querySelector("#app");
 
 function formatDate(value) {
-  if (!value) return "Never";
+  if (!value) return window.__t("common.never");
   const d = new Date(value);
-  return Number.isNaN(d.valueOf()) ? "Unknown" : d.toLocaleString();
+  return Number.isNaN(d.valueOf()) ? window.__t("common.unknown") : d.toLocaleString();
 }
 
 function downloadText(name, text, type = "application/json") {
@@ -67,6 +68,8 @@ async function clearArchive(origin) {
 
 async function render() {
   const settings = await getSettings();
+  const { t, locale, locales } = await getI18nContext();
+  window.__t = t;
   const origin = settings.baseUrl ? originFromBaseUrl(settings.baseUrl) : null;
   const chats = origin ? await getChatsByOrigin(origin) : [];
   const localOnlyCount = chats.filter((c) => c.localOnly).length;
@@ -74,48 +77,62 @@ async function render() {
 
   app.innerHTML = `
     <section class="card">
-      <h2>Setup</h2>
-      <label for="base-url">CANChat URL</label>
+      <h2>${t("popup.setup")}</h2>
+      <label for="base-url">${t("popup.urlLabel")}</label>
       <input id="base-url" type="url" placeholder="https://app.canchat.example" value="${settings.baseUrl || ""}" />
       <div class="row">
-        <button id="save-btn">Save & Test</button>
+        <button id="save-btn">${t("popup.saveTest")}</button>
       </div>
-      <p id="setup-msg" class="message info">Connection status: ${settings.baseUrl ? "Configured" : "Not configured"}</p>
+      <p id="setup-msg" class="message info">${t("popup.connectionStatus", { status: settings.baseUrl ? t("popup.configured") : t("popup.notConfigured") })}</p>
     </section>
 
     <section class="card">
-      <h2>Status</h2>
+      <h2>${t("popup.status")}</h2>
       <ul>
-        <li><strong>Configured origin:</strong> ${origin || "Not set"}</li>
-        <li><strong>Last sync:</strong> ${formatDate(settings.lastSyncAt)}</li>
-        <li><strong>Archived chats:</strong> ${archivedCount}</li>
-        <li><strong>Local-only chats:</strong> ${localOnlyCount}</li>
+        <li><strong>${t("popup.configuredOrigin")}</strong> ${origin || t("popup.notSet")}</li>
+        <li><strong>${t("popup.lastSync")}</strong> ${formatDate(settings.lastSyncAt)}</li>
+        <li><strong>${t("popup.archivedChats")}</strong> ${archivedCount}</li>
+        <li><strong>${t("popup.localOnlyChats")}</strong> ${localOnlyCount}</li>
       </ul>
     </section>
 
     <section class="card">
-      <h2>Actions</h2>
+      <h2>${t("popup.actions")}</h2>
       <div class="actions">
-        <button id="backup-btn">Sync Now</button>
-        <button id="open-archive-btn">Open archive page</button>
-        <button id="export-json-btn">Export JSON (Origin only)</button>
-        <button class="danger" id="delete-btn">Delete archive</button>
+        <button id="backup-btn">${t("popup.syncNow")}</button>
+        <button id="open-archive-btn">${t("popup.openArchive")}</button>
+        <button id="export-json-btn">${t("popup.exportJson")}</button>
+        <button class="danger" id="delete-btn">${t("popup.deleteArchive")}</button>
       </div>
       <p id="action-msg" class="message info"></p>
     </section>
 
     <section class="card">
-      <h2>Database Management</h2>
+      <h2>${t("popup.dbMgmt")}</h2>
       <div class="actions">
-        <button id="export-db-btn">Export Full DB Backup</button>
-        <button id="import-db-btn">Import DB Backup</button>
+        <button id="export-db-btn">${t("popup.exportDb")}</button>
+        <button id="import-db-btn">${t("popup.importDb")}</button>
         <input type="file" id="import-file" accept=".json" style="display: none;" />
       </div>
-      <p id="db-msg" class="message info">Use this to move your archive to another computer/browser.</p>
+      <p id="db-msg" class="message info">${t("popup.dbHelp")}</p>
+    </section>
+
+
+
+    <section class="card">
+      <h2>${t("popup.language")}</h2>
+      <label for="locale-select">${t("popup.languageLabel")}</label>
+      <select id="locale-select">
+        ${Object.keys(locales).sort().map((code) => `<option value="${code}" ${code===locale?"selected":""}>${code}</option>`).join("")}
+      </select>
+      <div class="actions">
+        <button id="import-lang-btn">${t("popup.importLanguage")}</button>
+        <input type="file" id="import-lang-file" accept=".json" style="display:none;"/>
+      </div>
     </section>
 
     <section class="card governance">
-      <h2>Local archive governance</h2>
+      <h2>${t("popup.governance")}</h2>
       <ul>
         <li>Data is stored locally in your browser and remains under your device profile.</li>
         <li>This extension does not bypass CANChat retention, deletion, or legal hold controls.</li>
@@ -137,7 +154,7 @@ async function render() {
       if (!granted) throw new Error("Host permission not granted.");
       await updateSettings({ baseUrl, discoveredEndpoints: null });
       await discoverEndpoints(true);
-      setMessage(setupMsg, "Connected: endpoint discovery succeeded.", "success");
+      setMessage(setupMsg, t("popup.msg.connected"), "success");
       await render();
     } catch (error) {
       console.error("[CANChat Archive] Save & Test failed", error);
@@ -151,7 +168,7 @@ async function render() {
       const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
       if (!res?.ok) throw new Error(res?.error || "Backup failed.");
       await updateSettings({ lastSyncAt: new Date().toISOString() });
-      setMessage(actionMsg, "Backup completed.", "success");
+      setMessage(actionMsg, t("popup.msg.backupCompleted"), "success");
       await render();
     } catch (error) {
       setMessage(actionMsg, `Backup failed: ${error.message}`, "error");
@@ -168,19 +185,19 @@ async function render() {
       if (!permission.ok) throw new Error(permission.reason);
       const data = await exportAllChatsJson(permission.origin);
       downloadText(`canchat-archive-${Date.now()}.json`, data);
-      setMessage(actionMsg, "Exported JSON archive.", "success");
+      setMessage(actionMsg, t("popup.msg.exported"), "success");
     } catch (error) {
       setMessage(actionMsg, `Export failed: ${error.message}`, "error");
     }
   });
 
   document.querySelector("#delete-btn").addEventListener("click", async () => {
-    if (!origin) return setMessage(actionMsg, "No configured archive to delete.", "error");
-    const confirmed = confirm("Delete all local archived data for this origin?");
+    if (!origin) return setMessage(actionMsg, t("popup.msg.noArchive"), "error");
+    const confirmed = confirm(t("popup.msg.confirmDelete"));
     if (!confirmed) return;
     try {
       await clearArchive(origin);
-      setMessage(actionMsg, "Deleted local archive.", "success");
+      setMessage(actionMsg, t("popup.msg.deleted"), "success");
       await render();
     } catch (error) {
       setMessage(actionMsg, `Delete failed: ${error.message}`, "error");
@@ -190,10 +207,10 @@ async function render() {
   // --- DATABASE MANAGEMENT ---
   document.querySelector("#export-db-btn").addEventListener("click", async () => {
     try {
-      setMessage(dbMsg, "Generating backup...", "info");
+      setMessage(dbMsg, t("popup.msg.genBackup"), "info");
       const dbJson = await exportFullDatabase();
       downloadText(`canchat-full-backup-${Date.now()}.json`, dbJson);
-      setMessage(dbMsg, "Database backup downloaded successfully.", "success");
+      setMessage(dbMsg, t("popup.msg.dbDownloadOk"), "success");
     } catch (error) {
       setMessage(dbMsg, `Export failed: ${error.message}`, "error");
     }
@@ -204,17 +221,43 @@ async function render() {
     document.querySelector("#import-file").click(); 
   });
 
+  document.querySelector("#locale-select").addEventListener("change", async (event) => {
+    await setLocale(event.target.value);
+    await render();
+  });
+
+  document.querySelector("#import-lang-btn").addEventListener("click", () => {
+    document.querySelector("#import-lang-file").click();
+  });
+
+  document.querySelector("#import-lang-file").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+    try {
+      const content = JSON.parse(await file.text());
+      const code = String(content.locale || file.name.replace(/\.json$/i, "")).trim();
+      const messages = content.messages || content;
+      await saveCustomLocale(code, messages);
+      await setLocale(code);
+      await render();
+    } catch (error) {
+      setMessage(dbMsg, `Language import failed: ${error.message}`, "error");
+    } finally {
+      event.target.value = "";
+    }
+  });
+
   document.querySelector("#import-file").addEventListener("change", async (event) => {
     const file = event.target.files[0];
     if (!file) return;
 
     try {
-      setMessage(dbMsg, "Importing database... do not close this window.", "info");
+      setMessage(dbMsg, t("popup.msg.dbImporting"), "info");
       
       const text = await file.text();
       await importFullDatabase(text);
       
-      setMessage(dbMsg, "Database imported successfully!", "success");
+      setMessage(dbMsg, t("popup.msg.dbImportOk"), "success");
       
       // Clear the file input so it can be used again
       event.target.value = ''; 

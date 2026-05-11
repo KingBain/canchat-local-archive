@@ -5,6 +5,8 @@ const DEFAULT_SETTINGS = {
   baseUrl: "",
   discoveredEndpoints: null,
   lastSyncAt: null,
+  locale: "en",
+  customLocales: {},
 };
 
 export function normalizeBaseUrl(input) {

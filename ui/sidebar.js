@@ -1,6 +1,7 @@
 import { withStore } from "../src/db.js";
 import { createChat, fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
+import { getI18nContext } from "../src/i18n.js";
 
 const results = document.querySelector("#results");
 const backupBtn = document.querySelector("#sidebar-backup-btn");
@@ -121,10 +122,11 @@ async function restoreOne(chat) {
 // 1. Instantly paint the UI using whatever is in the local DB right now
 async function paint() {
   const settings = await getSettings();
+  const { t } = await getI18nContext();
   const origin = settings.baseUrl ? originFromBaseUrl(settings.baseUrl) : null;
   
   if (!origin) {
-    results.innerHTML = '<div class="empty">Configure CANChat URL in popup first.</div>';
+    results.innerHTML = `<div class="empty">${t("sidebar.configureFirst")}</div>`;
     return origin;
   }
 
@@ -132,7 +134,7 @@ async function paint() {
   const archived = allChats.filter((chat) => !chat.restored && (chat.remotePresent === false || chat.localOnly));
   
   if (archived.length === 0) {
-    results.innerHTML = '<div class="empty">No local archived chats available.</div>';
+    results.innerHTML = `<div class="empty">${t("sidebar.empty")}</div>`;
     return origin;
   }
 
