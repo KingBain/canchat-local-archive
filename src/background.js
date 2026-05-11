@@ -50,6 +50,8 @@ async function backupOrigin(origin) {
     }
 
     await putSyncMeta({ key: `last_sync:${origin}`, origin, at: new Date().toISOString() });
+    await updateSettings({ lastSyncAt: now });
+    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: new Date().toISOString() });
   } finally {
     runningByOrigin.delete(origin);
   }

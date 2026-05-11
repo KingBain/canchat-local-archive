@@ -46,6 +46,13 @@ async function render() {
   const chats = origin ? await getChatsByOrigin(origin) : [];
   const archivedCount = chats.length;
 
+  chrome.runtime.onMessage.addListener((message) => {
+    if (message.type === "sync-completed") {
+      // Force a re-render of the popup when a sync finishes
+      render(); 
+    }
+  });
+
   app.innerHTML = `
     <section class="card">
       <h2>${t("popup.setup")}</h2>
@@ -57,7 +64,7 @@ async function render() {
     <section class="card">
       <h2>${t("popup.dbMgmt")}</h2>
       <ul class="stats-list">
-        <li><span>${t("popup.lastSync")}:</span> <b>${formatDate(settings.lastSyncAt)}</b></li>
+        <li><span>${t("popup.lastSync")}</span> <b>${formatDate(settings.lastSyncAt)}</b></li>
         <li><span>${t("popup.archivedChats")}:</span> <b>${archivedCount}</b></li>
       </ul>
       <div class="grid-actions" style="margin-top:12px">
