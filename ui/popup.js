@@ -48,25 +48,25 @@ async function render() {
 
   app.innerHTML = `
     <section class="card">
-      <h2>Configuration</h2>
+      <h2>${t("popup.setup")}</h2>
       <input id="base-url" placeholder="https://chat.example.com" value="${settings.baseUrl || ""}" />
-      <div class="row"><button id="save-btn" class="primary" style="flex:1">Save & Test Connection</button></div>
+      <div class="row"><button id="save-btn" class="primary" style="flex:1">${t("popup.saveTest")}</button></div>
       <div id="setup-msg" class="message" style="margin-top:8px; font-size:11px"></div>
     </section>
 
     <section class="card">
-      <h2>Data Management</h2>
+      <h2>${t("popup.dbMgmt")}</h2>
       <ul class="stats-list">
-        <li><span>Sync:</span> <b>${formatDate(settings.lastSyncAt)}</b></li>
-        <li><span>Archived:</span> <b>${archivedCount}</b></li>
+        <li><span>${t("popup.lastSync")}:</span> <b>${formatDate(settings.lastSyncAt)}</b></li>
+        <li><span>${t("popup.archivedChats")}:</span> <b>${archivedCount}</b></li>
       </ul>
       <div class="grid-actions" style="margin-top:12px">
-        <button id="backup-btn">Sync Now</button>
-        <button id="open-archive-btn">View All</button>
-        <button id="export-json-btn">Export JSON</button>
-        <button id="export-db-btn">Backup DB</button>
-        <button id="import-db-btn">Import DB</button>
-        <button id="delete-btn" class="danger">Clear Data</button>
+        <button id="backup-btn">${t("popup.syncNow")}</button>
+        <button id="open-archive-btn">${t("popup.openArchive")}</button>
+        <button id="export-json-btn">${t("popup.exportJson")}</button>
+        <button id="export-db-btn">${t("popup.exportDb")}</button>
+        <button id="import-db-btn">${t("popup.importDb")}</button>
+        <button id="delete-btn" class="danger">${t("popup.deleteArchive")}</button>
       </div>
       <div id="action-msg" class="message" style="margin-top:8px; font-size:11px"></div>
       <div id="db-msg" class="message" style="margin-top:8px; font-size:11px"></div>
@@ -74,14 +74,14 @@ async function render() {
     </section>
 
     <section class="card">
-      <h2>Language</h2>
+      <h2>${t("popup.language")}</h2>
       <select id="locale-select">
         ${locales.map(code => `<option value="${code}" ${code===locale?"selected":""}>${code.toUpperCase()}</option>`).join("")}
       </select>
     </section>
   `;
 
-  // Attach a single Event Delegation listener to the app container
+  // --- SINGLE EVENT DELEGATION ---
   app.onclick = async (e) => {
     const target = e.target;
     const setupMsg = document.querySelector("#setup-msg");
@@ -89,43 +89,39 @@ async function render() {
     const dbMsg = document.querySelector("#db-msg");
 
     if (target.id === "save-btn") {
-  const saveBtn = target;
-  const input = document.querySelector("#base-url").value;
-  const setupMsg = document.querySelector("#setup-msg");
+      const originalText = target.textContent;
+      target.disabled = true;
+      target.classList.add("loading");
+      target.textContent = "Connecting...";
 
-  // Visual feedback: Start
-  saveBtn.disabled = true;
-  saveBtn.classList.add("loading");
-  saveBtn.textContent = "Connecting...";
-
-  try {
-    const baseUrl = normalizeBaseUrl(input);
-    const granted = await requestOriginPermission(baseUrl);
-    if (!granted) throw new Error("Host permission not granted.");
-    
-    await updateSettings({ baseUrl, discoveredEndpoints: null });
-    await discoverEndpoints(true); // This does the heavy lifting
-    
-    setMessage(setupMsg, "Connected successfully!", "success");
-  } catch (err) {
-    setMessage(setupMsg, `Error: ${err.message}`, "error");
-  } finally {
-    // Visual feedback: End
-    saveBtn.disabled = false;
-    saveBtn.classList.remove("loading");
-    saveBtn.textContent = "Save & Test Connection";
-    await render(); // Refresh counts/status
-  }
-}
+      try {
+        const input = document.querySelector("#base-url").value;
+        const baseUrl = normalizeBaseUrl(input);
+        const granted = await requestOriginPermission(baseUrl);
+        if (!granted) throw new Error("Host permission not granted.");
+        await updateSettings({ baseUrl, discoveredEndpoints: null });
+        await discoverEndpoints(true);
+        setMessage(setupMsg, t("popup.msg.connected"), "success");
+        await render();
+      } catch (err) {
+        setMessage(setupMsg, err.message, "error");
+      } finally {
+        target.disabled = false;
+        target.classList.remove("loading");
+        target.textContent = originalText;
+      }
+    }
 
     if (target.id === "backup-btn") {
       try {
+        target.disabled = true;
         const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
         if (!res?.ok) throw new Error(res?.error || "Backup failed.");
         await updateSettings({ lastSyncAt: new Date().toISOString() });
         setMessage(actionMsg, t("popup.msg.backupCompleted"), "success");
         await render();
-      } catch (err) { setMessage(actionMsg, `Backup failed: ${err.message}`, "error"); }
+      } catch (err) { setMessage(actionMsg, err.message, "error"); }
+      finally { target.disabled = false; }
     }
 
     if (target.id === "open-archive-btn") chrome.tabs.create({ url: chrome.runtime.getURL("ui/archive.html") });
@@ -136,7 +132,7 @@ async function render() {
         if (!p.ok) throw new Error(p.reason);
         downloadText(`canchat-archive-${Date.now()}.json`, await exportAllChatsJson(p.origin));
         setMessage(actionMsg, t("popup.msg.exported"), "success");
-      } catch (err) { setMessage(actionMsg, `Export failed: ${err.message}`, "error"); }
+      } catch (err) { setMessage(actionMsg, err.message, "error"); }
     }
 
     if (target.id === "delete-btn") {
@@ -150,17 +146,19 @@ async function render() {
         setMessage(dbMsg, t("popup.msg.genBackup"), "info");
         downloadText(`backup-${Date.now()}.json`, await exportFullDatabase());
         setMessage(dbMsg, t("popup.msg.dbDownloadOk"), "success");
-      } catch (err) { setMessage(dbMsg, `Export failed: ${err.message}`, "error"); }
+      } catch (err) { setMessage(dbMsg, err.message, "error"); }
     }
 
     if (target.id === "import-db-btn") document.querySelector("#import-file").click();
   };
 
+  // --- LANGUAGE HANDLER ---
   document.querySelector("#locale-select").onchange = async (e) => {
     await setLocale(e.target.value);
     await render();
   };
 
+  // --- FILE HANDLER ---
   document.querySelector("#import-file").onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
