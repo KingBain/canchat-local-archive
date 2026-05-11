@@ -1,4 +1,5 @@
 import { getSettings, normalizeBaseUrl, updateSettings } from "./settings.js";
+import { idFromChatLike } from "./chatIds.js";
 
 const CANDIDATES = {
   list: [
@@ -94,10 +95,6 @@ function extractFirstListItem(body) {
     ? body
     : body?.items || body?.chats || body?.conversations || body?.data || body?.results || [];
   return Array.isArray(items) ? items.find(Boolean) : null;
-}
-
-function idFromChatLike(item) {
-  return item?.id || item?.chatId || item?.conversationId || null;
 }
 
 function candidateScore(listPath, candidatePath) {

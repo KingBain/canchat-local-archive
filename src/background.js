@@ -1,4 +1,5 @@
 import { fetchChatDetail, fetchChatList } from "./api.js";
+import { stringIdFromChatLike } from "./chatIds.js";
 import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
 import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl, updateSettings } from "./settings.js";
 
@@ -21,9 +22,9 @@ export async function runBackupOnce(origin, deps = {}) {
   let syncedCount = 0;
 
   for (const item of list) {
-    const id = item.id || item.chatId || item.conversationId;
+    const id = stringIdFromChatLike(item);
     if (!id) continue;
-    remoteIds.add(String(id));
+    remoteIds.add(id);
 
     try {
       const detail = await apiFetchChatDetail(id);
@@ -33,7 +34,7 @@ export async function runBackupOnce(origin, deps = {}) {
       if (typeof ts === "number" && ts < 2000000000) ts = ts * 1000;
 
       const chat = {
-        id: String(id),
+        id,
         origin,
         title: detail.title || item.title || "Untitled",
         updatedAt: ts ? new Date(ts).toISOString() : new Date().toISOString(),

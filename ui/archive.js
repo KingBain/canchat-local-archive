@@ -1,6 +1,7 @@
 import { originIdKey, withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
 import { fetchChatList } from "../src/api.js";
+import { stringIdFromChatLike } from "../src/chatIds.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 import { getI18nContext } from "../src/i18n.js";
 import { escapeHtml, extractPlainText, generateSnippet } from "../src/chatText.js";
@@ -31,7 +32,7 @@ async function reconcileRemotePresence(chats) {
 
   try {
     const remoteChats = await fetchChatList();
-    const remoteIds = new Set(remoteChats.map((chat) => String(chat.id)).filter(Boolean));
+    const remoteIds = new Set(remoteChats.map(stringIdFromChatLike).filter(Boolean));
 
     await Promise.all(
       chats.map(async (chat) => {
