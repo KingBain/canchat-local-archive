@@ -13,7 +13,9 @@ export async function restoreAll(origin) {
       const normalizedChat = {
         ...sourceChat,
         messages: Array.isArray(sourceChat?.messages) ? sourceChat.messages : [],
-        history: Array.isArray(sourceChat?.history) ? sourceChat.history : [],
+        history: (sourceChat?.history && typeof sourceChat.history === "object" && !Array.isArray(sourceChat.history)) 
+          ? sourceChat.history 
+          : { messages: {}, currentId: null },
         models: Array.isArray(sourceChat?.models) ? sourceChat.models : [],
       };
 
