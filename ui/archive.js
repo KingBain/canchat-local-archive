@@ -9,6 +9,57 @@ function escapeHtml(s) {
   return String(s || "").replace(/[&<>\"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
 }
 
+// 1. New Helper: Extract ONLY the human/assistant message text from the payload
+function extractPlainText(chat) {
+  const messages = [];
+  const seen = new Set();
+
+  function visit(node) {
+    if (!node || typeof node !== "object") return;
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+
+    // Grab text only if this object looks like a message (has a role/author)
+    const role = node.role || node.author || node.sender || node.type;
+    if (role && (typeof node.content === "string" || typeof node.text === "string")) {
+      const text = (node.content || node.text).trim();
+      if (text) messages.push(text);
+    }
+
+    for (const value of Object.values(node)) {
+      visit(value);
+    }
+  }
+
+  visit(chat.detail || chat);
+  // Remove duplicates and join with spacing
+  return Array.from(new Set(messages)).join(" ... ");
+}
+
+// 2. New Helper: Create a clean UI snippet (and center it around the search query if active)
+function generateSnippet(text, query) {
+  if (!text) return "No message content found.";
+  if (!query) return text.slice(0, 180) + (text.length > 180 ? "..." : "");
+
+  const lowerText = text.toLowerCase();
+  const idx = lowerText.indexOf(query);
+  if (idx === -1) return text.slice(0, 180) + (text.length > 180 ? "..." : "");
+
+  const start = Math.max(0, idx - 40);
+  const end = Math.min(text.length, idx + 140);
+  let snippet = text.slice(start, end).replace(/\s+/g, " ").trim();
+  
+  if (start > 0) snippet = "..." + snippet;
+  if (end < text.length) snippet = snippet + "...";
+  
+  return snippet;
+}
+
 async function getChats(origin) {
   return withStore("chats", "readonly", (store) =>
     new Promise((resolve, reject) => {
@@ -27,7 +78,6 @@ function statusOf(chat) {
   return "archived locally";
 }
 
-
 async function reconcileRemotePresence(chats) {
   if (!chats.length) return;
 
@@ -45,14 +95,12 @@ async function reconcileRemotePresence(chats) {
           changed = true;
         }
 
-        // If the chat is no longer on the server, reset it to a local archive state
         if (!isRemotePresent && (chat.restored || !chat.localOnly)) {
           chat.restored = false;
           chat.localOnly = true;
           changed = true;
         }
 
-        // If a previously local chat is found on the server, clear the localOnly flag
         if (isRemotePresent && chat.localOnly) {
           chat.localOnly = false;
           changed = true;
@@ -102,7 +150,6 @@ async function restoreOne(chat) {
     chat: {
       ...normalizedChat,
       id: "",
-      // REMOVED the "[Restored] " prefix here:
       title: chat.title || normalizedChat.title || "Untitled",
       timestamp: Date.now() 
     }
@@ -119,7 +166,6 @@ async function restoreOne(chat) {
     store.put({ localId: chat.id, remoteId: remoteId, origin: chat.origin, restoredAt: new Date().toISOString() })
   );
 
-  // 1. Create the new chat record first
   const newChatRecord = {
     ...chat,
     id: remoteId,
@@ -131,13 +177,11 @@ async function restoreOne(chat) {
     detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } 
   };
 
-  // 2. Save the chat
   await withStore("chats", "readwrite", (store) => {
     store.delete(chat.id); 
     return store.put(newChatRecord); 
   });
 
-  // 3. Save the search index (Now it correctly accesses newChatRecord)
   await withStore("search_docs", "readwrite", (store) => {
     store.delete(chat.id); 
     return store.put({
@@ -160,6 +204,11 @@ async function render() {
   }
 
   const chats = await getChats(origin);
+  
+  // Pre-calculate plain text once so search is lightning fast
+  for (const chat of chats) {
+    chat._plainText = extractPlainText(chat);
+  }
 
   app.innerHTML = `
     <header>
@@ -167,7 +216,7 @@ async function render() {
       <p class="governance">Stored locally in this browser profile. No retention bypass. Restore creates a new conversation.</p>
     </header>
     <section class="toolbar">
-      <input id="search" placeholder="Search title and content" />
+      <input id="search" placeholder="Search title and conversation history..." />
       <select id="filter">
         <option value="all">All</option>
         <option value="still on CANChat">Still on CANChat</option>
@@ -188,7 +237,9 @@ async function render() {
     const filtered = chats.filter((chat) => {
       const status = statusOf(chat);
       if (f !== "all" && status !== f) return false;
-      const hay = `${chat.title || ""} ${JSON.stringify(chat.detail || {})}`.toLowerCase();
+      
+      // Search through Title and actual message Plain Text instead of raw JSON!
+      const hay = `${chat.title || ""} ${chat._plainText}`.toLowerCase();
       return !q || hay.includes(q);
     });
 
@@ -196,13 +247,15 @@ async function render() {
       .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
       .map((chat) => {
         const status = statusOf(chat);
-        const snippet = JSON.stringify(chat.detail || {}).slice(0, 180).replace(/\s+/g, " ");
+        const snippetText = generateSnippet(chat._plainText, q);
+        const formattedDate = new Date(chat.updatedAt).toLocaleString(); // Format ugly date string
         const primaryAction = chat.remotePresent ? '<button data-action="open">Open</button>' : '<button data-action="restore-open">Restore/Open</button>';
+        
         return `
           <article class="card" data-id="${chat.id}">
             <h3>${escapeHtml(chat.title || "Untitled")}</h3>
-            <p class="snippet">${escapeHtml(snippet)}</p>
-            <p class="meta">Updated: ${escapeHtml(chat.updatedAt || "Unknown")} · Status: <span class="status">${status}</span></p>
+            <p class="snippet" style="font-style: italic; font-size: 13px; line-height: 1.4;">${escapeHtml(snippetText)}</p>
+            <p class="meta">Updated: ${escapeHtml(formattedDate)} · Status: <span class="status">${status}</span></p>
             <div class="actions">
               ${primaryAction}
               <button data-action="export">Export Markdown</button>
@@ -229,6 +282,8 @@ async function render() {
     }
     if (action === "restore-open") {
       try {
+        button.textContent = "Restoring...";
+        button.disabled = true;
         const created = chat.remotePresent ? { id: chat.id } : await restoreOne(chat);
         const remoteId = created?.id || created?.chatId || chat.id;
         const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
@@ -236,6 +291,8 @@ async function render() {
         paint();
       } catch (error) {
         alert(`Restore failed: ${error.message}`);
+        button.textContent = "Restore/Open";
+        button.disabled = false;
       }
     }
     if (action === "export") {
@@ -256,7 +313,7 @@ async function render() {
 
   paint();
   await reconcileRemotePresence(chats);
-  paint();
+  paint(); // Repaint in case statuses changed
 }
 
 render().catch((error) => {
