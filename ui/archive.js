@@ -1,4 +1,4 @@
-import { withStore } from "../src/db.js";
+import { originIdKey, withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
 import { createChat, fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
@@ -108,7 +108,7 @@ async function reconcileRemotePresence(chats) {
         }
 
         if (changed) {
-          await withStore("chats", "readwrite", (store) => store.put(chat));
+          await withStore("chats", "readwrite", (store) => store.put({ ...chat, id: String(chat.id) }));
         }
       })
     );
@@ -117,9 +117,10 @@ async function reconcileRemotePresence(chats) {
   }
 }
 
-async function deleteChatLocal(id) {
-  await withStore("chats", "readwrite", (store) => store.delete(id));
-  await withStore("search_docs", "readwrite", (store) => store.delete(id));
+async function deleteChatLocal(origin, id) {
+  const key = originIdKey(origin, id);
+  await withStore("chats", "readwrite", (store) => store.delete(key));
+  await withStore("search_docs", "readwrite", (store) => store.delete(key));
 }
 
 function download(name, content) {
@@ -169,7 +170,7 @@ async function restoreOne(chat) {
 
   const newChatRecord = {
     ...chat,
-    id: remoteId,
+    id: String(remoteId),
     title: payload.chat.title,
     updatedAt: new Date().toISOString(),
     restored: true,
@@ -179,14 +180,14 @@ async function restoreOne(chat) {
   };
 
   await withStore("chats", "readwrite", (store) => {
-    store.delete(chat.id); 
+    store.delete(originIdKey(chat.origin, chat.id)); 
     return store.put(newChatRecord); 
   });
 
   await withStore("search_docs", "readwrite", (store) => {
-    store.delete(chat.id); 
+    store.delete(originIdKey(chat.origin, chat.id)); 
     return store.put({
-      id: remoteId, 
+      id: String(remoteId), 
       origin: chat.origin,
       titleLower: newChatRecord.title.toLowerCase(),
       contentLower: JSON.stringify(newChatRecord.detail).toLowerCase()
@@ -303,7 +304,7 @@ async function render() {
     }
     if (action === "delete") {
       if (!confirm("Delete this local archived copy?")) return;
-      await deleteChatLocal(chat.id);
+      await deleteChatLocal(origin, chat.id);
       const idx = chats.findIndex((c) => c.id === chat.id);
       if (idx >= 0) chats.splice(idx, 1);
       paint();

@@ -1,4 +1,4 @@
-import { getAllSearchDocs, withStore } from "./db.js";
+import { getAllSearchDocs, originIdKey, withStore } from "./db.js";
 
 export function includesAllTerms(text, terms) {
   return terms.every((t) => text.includes(t));
@@ -20,7 +20,7 @@ export async function searchChats(origin, query) {
     if (!includesAllTerms(hay, terms)) continue;
     const chat = await withStore("chats", "readonly", (store) =>
       new Promise((resolve, reject) => {
-        const r = store.get(doc.id);
+        const r = store.get(originIdKey(origin, doc.id));
         r.onsuccess = () => resolve(r.result);
         r.onerror = () => reject(r.error);
       })

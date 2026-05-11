@@ -1,4 +1,4 @@
-import { withStore } from "../src/db.js";
+import { originIdKey, withStore } from "../src/db.js";
 import { createChat, fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 import { getI18nContext } from "../src/i18n.js";
@@ -48,7 +48,7 @@ async function reconcileRemotePresence(chats) {
         }
 
         if (chatChanged) {
-          await withStore("chats", "readwrite", (store) => store.put(chat));
+          await withStore("chats", "readwrite", (store) => store.put({ ...chat, id: String(chat.id) }));
           changed = true;
         }
       })
@@ -92,7 +92,7 @@ async function restoreOne(chat) {
 
   const newChatRecord = {
     ...chat,
-    id: remoteId,
+    id: String(remoteId),
     title: payload.chat.title,
     updatedAt: new Date().toISOString(),
     restored: true,
@@ -102,14 +102,14 @@ async function restoreOne(chat) {
   };
 
   await withStore("chats", "readwrite", (store) => {
-    store.delete(chat.id); 
+    store.delete(originIdKey(chat.origin, chat.id)); 
     return store.put(newChatRecord); 
   });
 
   await withStore("search_docs", "readwrite", (store) => {
-    store.delete(chat.id); 
+    store.delete(originIdKey(chat.origin, chat.id)); 
     return store.put({
-      id: remoteId, 
+      id: String(remoteId), 
       origin: chat.origin,
       titleLower: newChatRecord.title.toLowerCase(),
       contentLower: JSON.stringify(newChatRecord.detail).toLowerCase()

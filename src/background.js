@@ -1,6 +1,6 @@
 import { fetchChatDetail, fetchChatList } from "./api.js";
 import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
-import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl } from "./settings.js";
+import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl, updateSettings } from "./settings.js";
 
 const runningByOrigin = new Set();
 let shutdownBackupTimer = null;
@@ -49,9 +49,10 @@ async function backupOrigin(origin) {
       }
     }
 
-    await putSyncMeta({ key: `last_sync:${origin}`, origin, at: new Date().toISOString() });
+    const now = new Date().toISOString();
+    await putSyncMeta({ key: `last_sync:${origin}`, origin, at: now });
     await updateSettings({ lastSyncAt: now });
-    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: new Date().toISOString() });
+    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: now });
   } finally {
     runningByOrigin.delete(origin);
   }
