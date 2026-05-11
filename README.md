@@ -10,7 +10,11 @@ Because many enterprise and government AI chat instances have strict data retent
 
 ## 🌟 Features
 
-* **🤖 Auto-Backups:** Automatically syncs your active conversations to your browser's local IndexedDB in the background.
+* **🤖 Auto-Backups:** Automatically syncs your active conversations to your browser's local IndexedDB in the background. You never have to remember to hit "save". Backups are triggered seamlessly when you:
+  * **Chat actively:** Auto-saves every 2 minutes while the CanChat tab is open.
+  * **Change chats:** Captures data instantly when you click between different conversations.
+  * **Switch tabs:** Saves your progress the moment you click away to another browser tab.
+  * **Leave the site:** Ensures a final sync occurs if you close the window or navigate to another website.
 * **🔍 Smart Full-Text Search:** A dedicated archive page to search through the actual plain-text history of all your past and deleted conversations.
 * **🔁 One-Click Restore:** Accidentally deleted a chat? Retention policy wiped it? Click "Restore" to perfectly reconstruct the chat (with full history and branching) back onto the live server.
 * **🗂️ Native Side Panel:** Quick access to your locally archived and deleted chats right from your browser's native right-hand side panel.

@@ -90,6 +90,64 @@ chrome.windows.onRemoved.addListener(() => {
   scheduleShutdownBackupCheck();
 });
 
+// ==========================================
+// NEW AUTO-SYNC TRIGGERS
+// ==========================================
+
+// 1. Polling: Sync active conversations every 2 minutes
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.alarms.create("canchat-sync-poll", { periodInMinutes: 2 });
+});
+
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name === "canchat-sync-poll") {
+    const settings = await getSettings();
+    if (!settings.enabled || !settings.baseUrl) return;
+    
+    const origin = originFromBaseUrl(settings.baseUrl);
+    const canchatTabs = await chrome.tabs.query({ url: `${origin}/*` });
+    
+    // Only run the backup if they actually have a CanChat tab open right now
+    if (canchatTabs.length > 0) {
+      backupOrigin(origin).catch(() => {});
+    }
+  }
+});
+
+// 2. SPA Navigation: Sync when navigating between chats or leaving the site
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  // Fire when the URL changes (changing chats) or page finishes loading
+  if (changeInfo.url || changeInfo.status === "complete") {
+    const settings = await getSettings();
+    if (!settings.enabled || !settings.baseUrl) return;
+    
+    const origin = originFromBaseUrl(settings.baseUrl);
+    
+    if (tab.url && tab.url.startsWith(origin)) {
+      // User navigated around inside CanChat
+      backupOrigin(origin).catch(() => {});
+    } else if (changeInfo.url && !changeInfo.url.startsWith(origin)) {
+      // User typed a different website into the address bar, leaving CanChat
+      scheduleShutdownBackupCheck();
+    }
+  }
+});
+
+// 3. Tab Switching: Sync immediately when they click away to another tab
+chrome.tabs.onActivated.addListener(async () => {
+  const settings = await getSettings();
+  if (!settings.enabled || !settings.baseUrl) return;
+  
+  const origin = originFromBaseUrl(settings.baseUrl);
+  const canchatTabs = await chrome.tabs.query({ url: `${origin}/*` });
+  
+  // If they click away, save the state of their current CanChat tabs
+  if (canchatTabs.length > 0) {
+    backupOrigin(origin).catch(() => {});
+  }
+});
+
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "canchat-page-loaded") {
     (async () => {
