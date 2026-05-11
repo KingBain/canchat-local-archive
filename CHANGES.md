@@ -1,5 +1,27 @@
 # CHANGES
 
+## 2026-05-11 — Reliability hardening for sync, restore, and endpoint discovery
+
+### Summary
+Implemented the reliability-first improvement pass for the working extension.
+
+### What changed
+- Centralized restore behavior in `src/restore.js` with `restoreChat(origin, chat)`, shared payload normalization, remote ID extraction, restore mapping writes, chat remapping, and search document remapping.
+- Updated archive and sidebar restore actions to use the shared restore API instead of duplicated UI-local logic.
+- Hardened endpoint discovery in `src/api.js` with route-family-aware detail/create selection and stored diagnostics for list/detail candidate outcomes.
+- Updated `createChat` to use the discovered create endpoint instead of hardcoding `/api/v1/chats/new`.
+- Refactored backup execution in `src/background.js` to return structured results, track per-chat detail failures, and queue one follow-up run when sync is triggered during an active backup.
+- Added shared `src/chatText.js` helpers for HTML escaping, plain-text extraction, and snippets; sidebar titles are now escaped before insertion.
+- Replaced the popup clear-archive placeholder with a real local archive clear for chats, search docs, restore mappings, sync metadata, and `lastSyncAt`.
+
+### Tests
+- Added automated coverage for endpoint fallback/diagnostics, create endpoint selection, restore remapping, queued backup behavior, partial backup failures, and shared UI text helpers.
+- `npm test` passes with 17 tests.
+
+### Follow-up
+- Validate the discovered API routes and `/c/{chat_id}` UI route against real CANChat/Open WebUI fork deployments.
+- Consider surfacing endpoint diagnostics in the popup UI after failed Save/Test attempts.
+
 ## 2026-04-30 — Prefer v1 CANChat/Open WebUI API candidates
 
 ### Summary
@@ -72,4 +94,3 @@ Adjusted list endpoint discovery to treat a successful HTTP response as discover
 
 Why
 - Some CANChat/Open WebUI forks expose valid list routes with variant payload contracts, causing false negatives during Save & Test endpoint discovery.
-

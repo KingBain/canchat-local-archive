@@ -1,7 +1,9 @@
-import { originIdKey, withStore } from "../src/db.js";
-import { createChat, fetchChatList } from "../src/api.js";
+import { withStore } from "../src/db.js";
+import { fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 import { getI18nContext } from "../src/i18n.js";
+import { escapeHtml } from "../src/chatText.js";
+import { restoreChat } from "../src/restore.js";
 
 const results = document.querySelector("#results");
 const backupBtn = document.querySelector("#sidebar-backup-btn");
@@ -59,66 +61,6 @@ async function reconcileRemotePresence(chats) {
   return changed; // Returns true if DB was modified
 }
 
-async function restoreOne(chat) {
-  const oldDetail = chat.detail || {};
-  const sourceChat = (oldDetail && typeof oldDetail === "object" && oldDetail.chat && typeof oldDetail.chat === "object")
-    ? oldDetail.chat : oldDetail;
-
-  const normalizedChat = {
-    ...sourceChat,
-    messages: Array.isArray(sourceChat.messages) ? sourceChat.messages : [],
-    history: (sourceChat.history && typeof sourceChat.history === "object" && !Array.isArray(sourceChat.history)) 
-      ? sourceChat.history 
-      : { messages: {}, currentId: null },
-    models: Array.isArray(sourceChat.models) ? sourceChat.models : [],
-  };
-  
-  const payload = {
-    chat: {
-      ...normalizedChat,
-      id: "",
-      title: chat.title || normalizedChat.title || "Untitled",
-      timestamp: Date.now() 
-    }
-  };
-
-  const created = await createChat(payload);
-  const remoteId = created?.id || created?.chatId || created?.chat?.id;
-  if (!remoteId) throw new Error("Restore succeeded, but server returned no ID.");
-
-  await withStore("restore_mappings", "readwrite", (store) =>
-    store.put({ localId: chat.id, remoteId: remoteId, origin: chat.origin, restoredAt: new Date().toISOString() })
-  );
-
-  const newChatRecord = {
-    ...chat,
-    id: String(remoteId),
-    title: payload.chat.title,
-    updatedAt: new Date().toISOString(),
-    restored: true,
-    localOnly: false,
-    remotePresent: true,
-    detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } 
-  };
-
-  await withStore("chats", "readwrite", (store) => {
-    store.delete(originIdKey(chat.origin, chat.id)); 
-    return store.put(newChatRecord); 
-  });
-
-  await withStore("search_docs", "readwrite", (store) => {
-    store.delete(originIdKey(chat.origin, chat.id)); 
-    return store.put({
-      id: String(remoteId), 
-      origin: chat.origin,
-      titleLower: newChatRecord.title.toLowerCase(),
-      contentLower: JSON.stringify(newChatRecord.detail).toLowerCase()
-    });
-  });
-
-  return { id: remoteId };
-}
-
 // 1. Instantly paint the UI using whatever is in the local DB right now
 async function paint() {
   const settings = await getSettings();
@@ -141,9 +83,9 @@ async function paint() {
   archived.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 
   results.innerHTML = archived.map(chat => `
-    <div class="chat-item" data-id="${chat.id}">
+    <div class="chat-item" data-id="${escapeHtml(chat.id)}">
       <div class="chat-header">
-        <p class="chat-title" title="${(chat.title || "Untitled").replace(/"/g, '&quot;')}">${chat.title || "Untitled"}</p>
+        <p class="chat-title" title="${escapeHtml(chat.title || "Untitled")}">${escapeHtml(chat.title || "Untitled")}</p>
         <button class="restore-btn" data-action="restore">Restore</button>
       </div>
       <p class="chat-meta">${new Date(chat.updatedAt).toLocaleDateString()}</p>
@@ -197,8 +139,8 @@ results.addEventListener("click", async (event) => {
     const chat = chats.find(c => String(c.id) === String(id));
     if (!chat) throw new Error("Chat not found in archive");
 
-    const created = await restoreOne(chat);
-    const remoteId = created?.id;
+    const created = await restoreChat(origin, chat);
+    const remoteId = created?.remoteId;
     
     const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
     chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {

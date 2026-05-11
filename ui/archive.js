@@ -1,65 +1,12 @@
 import { originIdKey, withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
-import { createChat, fetchChatList } from "../src/api.js";
+import { fetchChatList } from "../src/api.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 import { getI18nContext } from "../src/i18n.js";
+import { escapeHtml, extractPlainText, generateSnippet } from "../src/chatText.js";
+import { restoreChat } from "../src/restore.js";
 
 const app = document.querySelector("#app");
-
-function escapeHtml(s) {
-  return String(s || "").replace(/[&<>\"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]));
-}
-
-// 1. New Helper: Extract ONLY the human/assistant message text from the payload
-function extractPlainText(chat) {
-  const messages = [];
-  const seen = new Set();
-
-  function visit(node) {
-    if (!node || typeof node !== "object") return;
-    if (seen.has(node)) return;
-    seen.add(node);
-
-    if (Array.isArray(node)) {
-      for (const item of node) visit(item);
-      return;
-    }
-
-    // Grab text only if this object looks like a message (has a role/author)
-    const role = node.role || node.author || node.sender || node.type;
-    if (role && (typeof node.content === "string" || typeof node.text === "string")) {
-      const text = (node.content || node.text).trim();
-      if (text) messages.push(text);
-    }
-
-    for (const value of Object.values(node)) {
-      visit(value);
-    }
-  }
-
-  visit(chat.detail || chat);
-  // Remove duplicates and join with spacing
-  return Array.from(new Set(messages)).join(" ... ");
-}
-
-// 2. New Helper: Create a clean UI snippet (and center it around the search query if active)
-function generateSnippet(text, query) {
-  if (!text) return "No message content found.";
-  if (!query) return text.slice(0, 180) + (text.length > 180 ? "..." : "");
-
-  const lowerText = text.toLowerCase();
-  const idx = lowerText.indexOf(query);
-  if (idx === -1) return text.slice(0, 180) + (text.length > 180 ? "..." : "");
-
-  const start = Math.max(0, idx - 40);
-  const end = Math.min(text.length, idx + 140);
-  let snippet = text.slice(start, end).replace(/\s+/g, " ").trim();
-  
-  if (start > 0) snippet = "..." + snippet;
-  if (end < text.length) snippet = snippet + "...";
-  
-  return snippet;
-}
 
 async function getChats(origin) {
   return withStore("chats", "readonly", (store) =>
@@ -133,70 +80,6 @@ function download(name, content) {
   URL.revokeObjectURL(url);
 }
 
-async function restoreOne(chat) {
-  const oldDetail = chat.detail || {};
-  const sourceChat = (oldDetail && typeof oldDetail === "object" && oldDetail.chat && typeof oldDetail.chat === "object")
-    ? oldDetail.chat
-    : oldDetail;
-
-  const normalizedChat = {
-    ...sourceChat,
-    messages: Array.isArray(sourceChat.messages) ? sourceChat.messages : [],
-    history: (sourceChat.history && typeof sourceChat.history === "object" && !Array.isArray(sourceChat.history)) 
-      ? sourceChat.history 
-      : { messages: {}, currentId: null },
-    models: Array.isArray(sourceChat.models) ? sourceChat.models : [],
-  };
-  
-  const payload = {
-    chat: {
-      ...normalizedChat,
-      id: "",
-      title: chat.title || normalizedChat.title || "Untitled",
-      timestamp: Date.now() 
-    }
-  };
-
-  const created = await createChat(payload);
-  
-  const remoteId = created?.id || created?.chatId || created?.chat?.id;
-  if (!remoteId) {
-    throw new Error("Restore succeeded, but the server didn't return a new Chat ID.");
-  }
-
-  await withStore("restore_mappings", "readwrite", (store) =>
-    store.put({ localId: chat.id, remoteId: remoteId, origin: chat.origin, restoredAt: new Date().toISOString() })
-  );
-
-  const newChatRecord = {
-    ...chat,
-    id: String(remoteId),
-    title: payload.chat.title,
-    updatedAt: new Date().toISOString(),
-    restored: true,
-    localOnly: false,
-    remotePresent: true,
-    detail: { ...oldDetail, chat: { ...normalizedChat, id: remoteId } } 
-  };
-
-  await withStore("chats", "readwrite", (store) => {
-    store.delete(originIdKey(chat.origin, chat.id)); 
-    return store.put(newChatRecord); 
-  });
-
-  await withStore("search_docs", "readwrite", (store) => {
-    store.delete(originIdKey(chat.origin, chat.id)); 
-    return store.put({
-      id: String(remoteId), 
-      origin: chat.origin,
-      titleLower: newChatRecord.title.toLowerCase(),
-      contentLower: JSON.stringify(newChatRecord.detail).toLowerCase()
-    });
-  });
-
-  return { id: remoteId };
-}
-
 async function render() {
   const settings = await getSettings();
   const { t } = await getI18nContext();
@@ -255,7 +138,7 @@ async function render() {
         const primaryAction = chat.remotePresent ? '<button data-action="open">Open</button>' : '<button data-action="restore-open">Restore/Open</button>';
         
         return `
-          <article class="card" data-id="${chat.id}">
+          <article class="card" data-id="${escapeHtml(chat.id)}">
             <h3>${escapeHtml(chat.title || "Untitled")}</h3>
             <p class="snippet" style="font-style: italic; font-size: 13px; line-height: 1.4;">${escapeHtml(snippetText)}</p>
             <p class="meta">Updated: ${escapeHtml(formattedDate)} · Status: <span class="status">${status}</span></p>
@@ -287,8 +170,8 @@ async function render() {
       try {
         button.textContent = "Restoring...";
         button.disabled = true;
-        const created = chat.remotePresent ? { id: chat.id } : await restoreOne(chat);
-        const remoteId = created?.id || created?.chatId || chat.id;
+        const created = chat.remotePresent ? { remoteId: chat.id } : await restoreChat(origin, chat);
+        const remoteId = created?.remoteId || chat.id;
         const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
         chrome.tabs.create({ url });
         paint();

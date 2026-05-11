@@ -89,12 +89,66 @@ async function parseJsonResponse(res, context) {
   }
 }
 
+function extractFirstListItem(body) {
+  const items = Array.isArray(body)
+    ? body
+    : body?.items || body?.chats || body?.conversations || body?.data || body?.results || [];
+  return Array.isArray(items) ? items.find(Boolean) : null;
+}
+
+function idFromChatLike(item) {
+  return item?.id || item?.chatId || item?.conversationId || null;
+}
+
+function candidateScore(listPath, candidatePath) {
+  if (listPath.startsWith("/api/v1/") && candidatePath.startsWith("/api/v1/")) return 0;
+  if (listPath.startsWith("/api/") && candidatePath.startsWith("/api/") && !candidatePath.startsWith("/api/v1/")) return 1;
+  if (!listPath.startsWith("/api/") && !candidatePath.startsWith("/api/")) return 2;
+  return 3;
+}
+
+function sortCandidatesForList(listPath, candidates) {
+  return [...candidates].sort((a, b) => candidateScore(listPath, a) - candidateScore(listPath, b));
+}
+
+function chooseCreateCandidate(listPath) {
+  return sortCandidatesForList(listPath, CANDIDATES.create)[0];
+}
+
+async function discoverDetailCandidate(baseUrl, listPath, sampleId, diagnostics) {
+  const candidates = sortCandidatesForList(listPath, CANDIDATES.detail);
+  if (!sampleId) {
+    diagnostics.push({ type: "detail", status: "skipped", reason: "No sample chat ID available; using closest route candidate." });
+    return candidates[0];
+  }
+
+  for (const template of candidates) {
+    const path = template.replace("{id}", encodeURIComponent(sampleId));
+    try {
+      const res = await authFetch(baseUrl, path);
+      const body = await parseJsonResponse(res, `Detail endpoint ${path}`);
+      if (looksLikeDetail(body)) {
+        diagnostics.push({ type: "detail", path: template, status: "ok" });
+        return template;
+      }
+      diagnostics.push({ type: "detail", path: template, status: "rejected", reason: "Response did not look like a chat detail." });
+    } catch (error) {
+      diagnostics.push({ type: "detail", path: template, status: "error", reason: error?.message || String(error) });
+    }
+  }
+
+  diagnostics.push({ type: "detail", status: "fallback", reason: "No detail candidate validated; using closest route candidate." });
+  return candidates[0];
+}
+
 export async function discoverEndpoints(force = false) {
   const settings = await getSettings();
   if (!settings.baseUrl) throw new Error("No base URL configured.");
   if (!force && settings.discoveredEndpoints) return settings.discoveredEndpoints;
 
   const discovered = {};
+  const diagnostics = [];
+  let listBody = null;
 
   debugLog("Starting endpoint discovery", { candidates: CANDIDATES.list });
 
@@ -105,6 +159,8 @@ export async function discoverEndpoints(force = false) {
       const body = await parseJsonResponse(res, `List endpoint ${path}`);
       if (looksLikeList(body)) {
         discovered.list = path;
+        listBody = body;
+        diagnostics.push({ type: "list", path, status: "ok", shape: "known" });
         debugLog("List endpoint discovered", { path, parsedAsJson: true });
         break;
       }
@@ -112,12 +168,21 @@ export async function discoverEndpoints(force = false) {
       // If the endpoint responds successfully but with an unknown JSON shape,
       // treat it as discovered to support fork-specific response contracts.
       discovered.list = path;
+      listBody = body;
+      diagnostics.push({
+        type: "list",
+        path,
+        status: "ok",
+        shape: "unknown",
+        keys: body && typeof body === "object" ? Object.keys(body) : null,
+      });
       debugLog("List endpoint accepted with unknown response shape", {
         path,
         keys: body && typeof body === "object" ? Object.keys(body) : null,
       });
       break;
     } catch (error) {
+      diagnostics.push({ type: "list", path, status: "error", reason: error?.message || String(error) });
       debugLog("List candidate failed", { path, error: error?.message || String(error) });
     }
   }
@@ -127,9 +192,10 @@ export async function discoverEndpoints(force = false) {
     throw new Error("Could not discover list endpoint from known candidates.");
   }
 
-  const detailTemplate = CANDIDATES.detail.find((p) => p.includes("{id}"));
-  discovered.detail = detailTemplate;
-  discovered.create = CANDIDATES.create[0];
+  const sampleId = idFromChatLike(extractFirstListItem(listBody));
+  discovered.detail = await discoverDetailCandidate(settings.baseUrl, discovered.list, sampleId, diagnostics);
+  discovered.create = chooseCreateCandidate(discovered.list);
+  discovered.diagnostics = diagnostics;
 
   debugLog("Endpoint discovery complete", discovered);
   await updateSettings({ discoveredEndpoints: discovered });
@@ -166,7 +232,8 @@ export async function fetchChatDetail(id) {
 
 export async function createChat(payload) {
   const settings = await getSettings();
-  const createPath = "/api/v1/chats/new";
+  const endpoints = await discoverEndpoints();
+  const createPath = endpoints.create || chooseCreateCandidate(endpoints.list || "/api/v1/chats/");
   const res = await authFetch(settings.baseUrl, createPath, {
     method: "POST",
     body: JSON.stringify(payload),

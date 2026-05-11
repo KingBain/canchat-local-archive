@@ -1,5 +1,5 @@
 import { discoverEndpoints } from "../src/api.js";
-import { getChatsByOrigin, exportFullDatabase, importFullDatabase } from "../src/db.js";
+import { getChatsByOrigin, exportFullDatabase, importFullDatabase, originIdKey, withStore } from "../src/db.js";
 import { exportAllChatsJson } from "../src/export.js";
 import {
   ensureConfiguredOriginPermission,
@@ -9,7 +9,7 @@ import {
   requestOriginPermission,
   updateSettings,
 } from "../src/settings.js";
-import { getI18nContext, saveCustomLocale, setLocale } from "../src/i18n.js";
+import { getI18nContext, setLocale } from "../src/i18n.js";
 
 const app = document.querySelector("#app");
 
@@ -35,8 +35,30 @@ function setMessage(el, text, kind = "info") {
   el.className = `message ${kind}`;
 }
 
-// ... (clearArchive function remains the same as in your original file)
-async function clearArchive(origin) { /* ... same as before ... */ }
+async function clearArchive(origin) {
+  const chats = await getChatsByOrigin(origin);
+  await withStore("chats", "readwrite", (store) => {
+    for (const chat of chats) store.delete(originIdKey(origin, chat.id));
+  });
+  await withStore("search_docs", "readwrite", (store) => {
+    for (const chat of chats) store.delete(originIdKey(origin, chat.id));
+  });
+  await withStore("restore_mappings", "readwrite", (store) => {
+    const idx = store.index("by_origin");
+    const req = idx.getAll(origin);
+    req.onsuccess = () => {
+      for (const mapping of req.result || []) store.delete(mapping.localId);
+    };
+  });
+  await withStore("sync_meta", "readwrite", (store) => {
+    const idx = store.index("by_origin");
+    const req = idx.getAll(origin);
+    req.onsuccess = () => {
+      for (const entry of req.result || []) store.delete(entry.key);
+    };
+  });
+  await updateSettings({ lastSyncAt: null });
+}
 
 async function render() {
   const settings = await getSettings();

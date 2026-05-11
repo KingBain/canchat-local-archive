@@ -3,20 +3,30 @@ import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
 import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl, updateSettings } from "./settings.js";
 
 const runningByOrigin = new Set();
+const queuedByOrigin = new Set();
 let shutdownBackupTimer = null;
 
-async function backupOrigin(origin) {
-  if (runningByOrigin.has(origin)) return;
-  runningByOrigin.add(origin);
-  try {
-    const list = await fetchChatList();
-    const remoteIds = new Set();
+export async function runBackupOnce(origin, deps = {}) {
+  const apiFetchChatList = deps.fetchChatList || fetchChatList;
+  const apiFetchChatDetail = deps.fetchChatDetail || fetchChatDetail;
+  const writeChat = deps.putChat || putChat;
+  const writeSearchDoc = deps.putSearchDoc || putSearchDoc;
+  const readChatsByOrigin = deps.getChatsByOrigin || getChatsByOrigin;
+  const writeSyncMeta = deps.putSyncMeta || putSyncMeta;
+  const saveSettings = deps.updateSettings || updateSettings;
 
-    for (const item of list) {
-      const id = item.id || item.chatId || item.conversationId;
-      if (!id) continue;
-      remoteIds.add(String(id));
-      const detail = await fetchChatDetail(id);
+  const list = await apiFetchChatList();
+  const remoteIds = new Set();
+  const failures = [];
+  let syncedCount = 0;
+
+  for (const item of list) {
+    const id = item.id || item.chatId || item.conversationId;
+    if (!id) continue;
+    remoteIds.add(String(id));
+
+    try {
+      const detail = await apiFetchChatDetail(id);
       // Get timestamp, handling both camelCase and snake_case.
       let ts = detail.updatedAt || detail.updated_at || item.updatedAt || item.updated_at;
       // If the timestamp is in seconds (10 digits), convert to milliseconds for JS Dates.
@@ -31,30 +41,56 @@ async function backupOrigin(origin) {
         detail,
       };
 
-      await putChat(chat);
-      await putSearchDoc({
+      await writeChat(chat);
+      await writeSearchDoc({
         id: chat.id,
         origin,
         titleLower: chat.title.toLowerCase(),
         contentLower: JSON.stringify(detail).toLowerCase(),
       });
+      syncedCount += 1;
+    } catch (error) {
+      failures.push({ id: String(id), error: error?.message || String(error) });
     }
+  }
 
-    const local = await getChatsByOrigin(origin);
-    for (const chat of local) {
-      if (!remoteIds.has(String(chat.id))) {
-        chat.remotePresent = false;
-        chat.localOnly = true;
-        await putChat(chat);
-      }
+  const local = await readChatsByOrigin(origin);
+  for (const chat of local) {
+    if (!remoteIds.has(String(chat.id))) {
+      chat.remotePresent = false;
+      chat.localOnly = true;
+      await writeChat(chat);
     }
+  }
 
-    const now = new Date().toISOString();
-    await putSyncMeta({ key: `last_sync:${origin}`, origin, at: now });
-    await updateSettings({ lastSyncAt: now });
-    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: now });
+  const completedAt = new Date().toISOString();
+  await writeSyncMeta({ key: `last_sync:${origin}`, origin, at: completedAt });
+  await saveSettings({ lastSyncAt: completedAt });
+
+  return { ok: true, syncedCount, failedCount: failures.length, failures, completedAt };
+}
+
+export async function backupOrigin(origin) {
+  return runQueuedBackup(origin, runBackupOnce, runningByOrigin, queuedByOrigin);
+}
+
+export async function runQueuedBackup(origin, runner, running = new Set(), queued = new Set()) {
+  if (running.has(origin)) {
+    queued.add(origin);
+    return { ok: true, queued: true, syncedCount: 0, failedCount: 0, failures: [], completedAt: null };
+  }
+
+  running.add(origin);
+  try {
+    const result = await runner(origin);
+    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: result.completedAt, result }).catch?.(() => {});
+    return result;
   } finally {
-    runningByOrigin.delete(origin);
+    running.delete(origin);
+    if (queued.has(origin)) {
+      queued.delete(origin);
+      runQueuedBackup(origin, runner, running, queued).catch(() => {});
+    }
   }
 }
 
@@ -159,8 +195,8 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
         if (!settings.enabled || !settings.baseUrl) return sendResponse({ ok: true, skipped: true });
         const permission = await ensureConfiguredOriginPermission();
         if (!permission.ok) return sendResponse({ ok: false, error: permission.reason });
-        await backupOrigin(originFromBaseUrl(settings.baseUrl));
-        sendResponse({ ok: true });
+        const result = await backupOrigin(originFromBaseUrl(settings.baseUrl));
+        sendResponse(result);
       } catch (error) {
         sendResponse({ ok: false, error: error.message });
       }
