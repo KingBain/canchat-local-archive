@@ -7,7 +7,7 @@ import { getI18nContext } from "../src/i18n.js";
 import { escapeHtml, extractPlainText, generateSnippet } from "../src/chatText.js";
 import { restoreChat } from "../src/restore.js";
 
-const app = document.querySelector("#app");
+const app = globalThis.document?.querySelector?.("#app") || null;
 
 async function getChats(origin) {
   return withStore("chats", "readonly", (store) =>
@@ -25,6 +25,25 @@ function statusOf(chat) {
   if (chat.remotePresent === false || chat.localOnly) return "archived locally";
   if (chat.remotePresent === true) return "still on CANChat";
   return "archived locally";
+}
+
+export function primaryArchiveAction(chat) {
+  return chat.remotePresent ? "open" : "restore-open";
+}
+
+export function applyRestoredArchiveChat(chats, chat, restored) {
+  const updated = {
+    ...chat,
+    id: String(restored.remoteId),
+    updatedAt: restored.restoredAt || chat.updatedAt,
+    restored: true,
+    localOnly: false,
+    remotePresent: true,
+  };
+
+  const index = chats.findIndex((candidate) => candidate === chat || String(candidate.id) === String(restored.localId));
+  if (index >= 0) chats.splice(index, 1, updated);
+  return updated;
 }
 
 async function reconcileRemotePresence(chats) {
@@ -136,7 +155,9 @@ async function render() {
         const status = statusOf(chat);
         const snippetText = generateSnippet(chat._plainText, q);
         const formattedDate = new Date(chat.updatedAt).toLocaleString(); // Format ugly date string
-        const primaryAction = chat.remotePresent ? '<button data-action="open">Open</button>' : '<button data-action="restore-open">Restore/Open</button>';
+        const primaryAction = primaryArchiveAction(chat) === "open"
+          ? '<button data-action="open">Open</button>'
+          : '<button data-action="restore-open">Restore/Open</button>';
         
         return `
           <article class="card" data-id="${escapeHtml(chat.id)}">
@@ -175,6 +196,9 @@ async function render() {
         const remoteId = created?.remoteId || chat.id;
         const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
         chrome.tabs.create({ url });
+        if (!chat.remotePresent && created?.remoteId) {
+          applyRestoredArchiveChat(chats, chat, created);
+        }
         paint();
       } catch (error) {
         alert(`Restore failed: ${error.message}`);
@@ -203,6 +227,8 @@ async function render() {
   paint(); // Repaint in case statuses changed
 }
 
-render().catch((error) => {
-  app.textContent = `Failed to load archive UI: ${error.message}`;
-});
+if (app) {
+  render().catch((error) => {
+    app.textContent = `Failed to load archive UI: ${error.message}`;
+  });
+}
