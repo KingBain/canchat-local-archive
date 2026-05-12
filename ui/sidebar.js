@@ -67,7 +67,7 @@ async function paint() {
   const settings = await getSettings();
   const { t } = await getI18nContext();
   const origin = settings.baseUrl ? originFromBaseUrl(settings.baseUrl) : null;
-  
+
   if (!origin) {
     results.innerHTML = `<div class="empty">${t("sidebar.configureFirst")}</div>`;
     return origin;
@@ -75,7 +75,7 @@ async function paint() {
 
   const allChats = await getAllChats(origin);
   const archived = allChats.filter((chat) => !chat.restored && (chat.remotePresent === false || chat.localOnly));
-  
+
   if (archived.length === 0) {
     results.innerHTML = `<div class="empty">${t("sidebar.empty")}</div>`;
     return origin;
@@ -89,10 +89,9 @@ async function paint() {
         <p class="chat-title" title="${escapeHtml(chat.title || "Untitled")}">${escapeHtml(chat.title || "Untitled")}</p>
         <button class="restore-btn" data-action="restore">Restore</button>
       </div>
-      <p class="chat-meta">${new Date(chat.updatedAt).toLocaleDateString()}</p>
     </div>
   `).join("");
-  
+
   return origin;
 }
 
@@ -126,12 +125,12 @@ backupBtn.addEventListener("click", async () => {
 results.addEventListener("click", async (event) => {
   const btn = event.target.closest("button[data-action='restore']");
   if (!btn) return;
-  
+
   const item = btn.closest(".chat-item");
   const id = item.dataset.id;
   const settings = await getSettings();
   const origin = originFromBaseUrl(settings.baseUrl);
-  
+
   btn.textContent = "Restoring...";
   btn.disabled = true;
 
@@ -142,12 +141,12 @@ results.addEventListener("click", async (event) => {
 
     const created = await restoreChat(origin, chat);
     const remoteId = created?.remoteId;
-    
+
     const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.update(tabs[0].id, {url: url});
+    chrome.tabs.query({ active: true, currentWindow: true }, function (tabs) {
+      chrome.tabs.update(tabs[0].id, { url: url });
     });
-    
+
     // Refresh the list so the restored chat disappears from the sidebar
     await updateAndRender();
   } catch (err) {
