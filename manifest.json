@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "CanChat Local Archive",
   "description": "Archive and search local chat data.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "permissions": [
     "storage",
     "activeTab",
@@ -11,7 +11,9 @@
     "sidePanel",
     "alarms"
   ],
-  "optional_host_permissions": ["<all_urls>"],
+  "optional_host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "src/background.js",
     "type": "module"
