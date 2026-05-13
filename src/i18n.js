@@ -1,3 +1,5 @@
+/* global chrome */
+
 import { getSettings, updateSettings } from "./settings.js";
 
 // Load manifest or map files dynamically

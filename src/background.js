@@ -1,3 +1,5 @@
+/* global chrome */
+
 import { fetchChatDetail, fetchChatList } from "./api.js";
 import { stringIdFromChatLike } from "./chatIds.js";
 import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
