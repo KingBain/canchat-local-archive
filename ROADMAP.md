@@ -3,7 +3,7 @@
 ## Completed tasks (initially minimal)
 
 - Repository planning scaffold created.
-- Added root-level goals, roadmap, and change log artifacts.
+- Added root-level goals, roadmap, and changelog artifacts.
 
 ## Current phase
 

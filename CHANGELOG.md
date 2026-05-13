@@ -1,3 +1,7 @@
+<!-- textlint-disable -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 ## [0.1.1](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.0...canchat-local-archive-v0.1.1) (2026-05-13)

@@ -1,3 +1,7 @@
+<!-- textlint-disable -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable MD024 -->
+
 # CHANGES
 
 ## 2026-05-11 — Reliability hardening for sync, restore, and endpoint discovery
