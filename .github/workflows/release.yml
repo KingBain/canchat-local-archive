@@ -26,15 +26,25 @@ jobs:
         if: ${{ steps.release.outputs.release_created }}
         uses: actions/checkout@v4
         with:
-          ref: ${{ steps.release.outputs.tag_name }}
+          ref: ${{ github.sha }}
+          persist-credentials: false
 
       - name: Package extension
         if: ${{ steps.release.outputs.release_created }}
         shell: bash
         run: |
-          ARCHIVE_NAME="canchat-local-archive-${{ steps.release.outputs.tag_name }}.zip"
-          zip -r "$ARCHIVE_NAME" manifest.json src ui icons locales
+          ARCHIVE_NAME="canchat-local-archive-${STEPS_RELEASE_OUTPUTS_TAG_NAME}.zip"
+
+          zip -r "$ARCHIVE_NAME" \
+            manifest.json \
+            src \
+            ui \
+            icons \
+            locales
+
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> "$GITHUB_ENV"
+        env:
+          STEPS_RELEASE_OUTPUTS_TAG_NAME: ${{ steps.release.outputs.tag_name }}
 
       - name: Upload extension ZIP to release
         if: ${{ steps.release.outputs.release_created }}
@@ -42,3 +52,5 @@ jobs:
         with:
           tag_name: ${{ steps.release.outputs.tag_name }}
           files: ${{ env.ARCHIVE_NAME }}
+          draft: false
+          fail_on_unmatched_files: true

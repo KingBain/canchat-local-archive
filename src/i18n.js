@@ -6,12 +6,22 @@ import { getSettings, updateSettings } from "./settings.js";
 const BUILTIN_LOCALES = ["en", "fr"];
 
 function deepGet(obj, path) {
-  return path.split(".").reduce((acc, k) => (acc && Object.prototype.hasOwnProperty.call(acc, k) ? acc[k] : undefined), obj);
+  return path
+    .split(".")
+    .reduce(
+      (acc, k) =>
+        acc && Object.prototype.hasOwnProperty.call(acc, k)
+          ? acc[k]
+          : undefined,
+      obj,
+    );
 }
 
 async function loadLocaleFile(locale) {
   try {
-    const response = await fetch(chrome.runtime.getURL(`locales/${locale}.json`));
+    const response = await fetch(
+      chrome.runtime.getURL(`locales/${locale}.json`),
+    );
     return await response.json();
   } catch (e) {
     console.error(`Failed to load locale: ${locale}`, e);
@@ -29,7 +39,7 @@ export async function getI18nContext() {
   if (!dict) {
     dict = await loadLocaleFile(locale);
   }
-  
+
   // Fallback to English if current fails
   if (!dict) {
     dict = await loadLocaleFile("en");
@@ -37,17 +47,22 @@ export async function getI18nContext() {
 
   const t = (key, vars = {}) => {
     const template = deepGet(dict, key) ?? key;
-    return String(template).replace(/\{(\w+)\}/g, (_, name) => String(vars[name] ?? `{${name}}`));
+    return String(template).replace(/\{(\w+)\}/g, (_, name) =>
+      String(vars[name] ?? `{${name}}`),
+    );
   };
 
   // Build the list of available locales (builtin + custom keys)
-  const availableLocales = new Set([...BUILTIN_LOCALES, ...Object.keys(customLocales)]);
+  const availableLocales = new Set([
+    ...BUILTIN_LOCALES,
+    ...Object.keys(customLocales),
+  ]);
 
-  return { 
-    locale, 
-    customLocales, 
-    t, 
-    locales: Array.from(availableLocales) 
+  return {
+    locale,
+    customLocales,
+    t,
+    locales: Array.from(availableLocales),
   };
 }
 
@@ -57,6 +72,9 @@ export async function setLocale(locale) {
 
 export async function saveCustomLocale(locale, messages) {
   const settings = await getSettings();
-  const customLocales = { ...(settings.customLocales || {}), [locale]: messages };
+  const customLocales = {
+    ...(settings.customLocales || {}),
+    [locale]: messages,
+  };
   await updateSettings({ customLocales });
 }
