@@ -1,7 +1,7 @@
 export function escapeHtml(value) {
   return String(value || "").replace(
     /[&<>"]/g,
-    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch])
+    (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch],
   );
 }
 
@@ -36,10 +36,14 @@ export function extractPlainText(chat) {
 }
 
 export function generateSnippet(text, query = "") {
-  const normalized = String(text || "").replace(/\s+/g, " ").trim();
+  const normalized = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!normalized) return "No message content found.";
 
-  const q = String(query || "").toLowerCase().trim();
+  const q = String(query || "")
+    .toLowerCase()
+    .trim();
   if (!q) return truncate(normalized, 180);
 
   const idx = normalized.toLowerCase().indexOf(q);

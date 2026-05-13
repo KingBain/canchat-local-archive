@@ -1,6 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildRestorePayload, remoteIdFromCreateResponse, restoreChat } from "../src/restore.js";
+import {
+  buildRestorePayload,
+  remoteIdFromCreateResponse,
+  restoreChat,
+} from "../src/restore.js";
 
 test("remoteIdFromCreateResponse supports known response shapes", () => {
   assert.equal(remoteIdFromCreateResponse({ id: "a" }), "a");
@@ -12,7 +16,13 @@ test("remoteIdFromCreateResponse supports known response shapes", () => {
 test("buildRestorePayload preserves chat content with safe defaults", () => {
   const payload = buildRestorePayload({
     title: "Local title",
-    detail: { chat: { messages: [{ role: "user", content: "Hi" }], history: null, models: null } },
+    detail: {
+      chat: {
+        messages: [{ role: "user", content: "Hi" }],
+        history: null,
+        models: null,
+      },
+    },
   });
 
   assert.equal(payload.chat.id, "");
@@ -36,17 +46,23 @@ test("restoreChat remaps chat, search doc, and restore mapping to the new remote
     },
   };
 
-  const result = await restoreChat("https://chat.example.com", {
-    id: "local-1",
-    origin: "https://chat.example.com",
-    title: "Archived",
-    detail: { chat: { messages: [{ role: "assistant", content: "Saved" }] } },
-  }, deps);
+  const result = await restoreChat(
+    "https://chat.example.com",
+    {
+      id: "local-1",
+      origin: "https://chat.example.com",
+      title: "Archived",
+      detail: { chat: { messages: [{ role: "assistant", content: "Saved" }] } },
+    },
+    deps,
+  );
 
   assert.equal(result.localId, "local-1");
   assert.equal(result.remoteId, "remote-1");
   assert.deepEqual(deletes.chats, [["https://chat.example.com", "local-1"]]);
-  assert.deepEqual(deletes.search_docs, [["https://chat.example.com", "local-1"]]);
+  assert.deepEqual(deletes.search_docs, [
+    ["https://chat.example.com", "local-1"],
+  ]);
   assert.equal(writes.restore_mappings[0].remoteId, "remote-1");
   assert.equal(writes.chats[0].id, "remote-1");
   assert.equal(writes.chats[0].remotePresent, true);

@@ -10,13 +10,16 @@ const results = document.querySelector("#results");
 const backupBtn = document.querySelector("#sidebar-backup-btn");
 
 async function getAllChats(origin) {
-  return withStore("chats", "readonly", (store) =>
-    new Promise((resolve, reject) => {
-      const idx = store.index("by_origin");
-      const r = idx.getAll(origin);
-      r.onsuccess = () => resolve(r.result || []);
-      r.onerror = () => reject(r.error);
-    })
+  return withStore(
+    "chats",
+    "readonly",
+    (store) =>
+      new Promise((resolve, reject) => {
+        const idx = store.index("by_origin");
+        const r = idx.getAll(origin);
+        r.onsuccess = () => resolve(r.result || []);
+        r.onerror = () => reject(r.error);
+      }),
   );
 }
 
@@ -26,7 +29,9 @@ async function reconcileRemotePresence(chats) {
   let changed = false;
   try {
     const remoteChats = await fetchChatList();
-    const remoteIds = new Set(remoteChats.map(stringIdFromChatLike).filter(Boolean));
+    const remoteIds = new Set(
+      remoteChats.map(stringIdFromChatLike).filter(Boolean),
+    );
 
     await Promise.all(
       chats.map(async (chat) => {
@@ -51,10 +56,12 @@ async function reconcileRemotePresence(chats) {
         }
 
         if (chatChanged) {
-          await withStore("chats", "readwrite", (store) => store.put({ ...chat, id: String(chat.id) }));
+          await withStore("chats", "readwrite", (store) =>
+            store.put({ ...chat, id: String(chat.id) }),
+          );
           changed = true;
         }
-      })
+      }),
     );
   } catch {
     // Keep last known status on network or auth failures.
@@ -74,7 +81,10 @@ async function paint() {
   }
 
   const allChats = await getAllChats(origin);
-  const archived = allChats.filter((chat) => !chat.restored && (chat.remotePresent === false || chat.localOnly));
+  const archived = allChats.filter(
+    (chat) =>
+      !chat.restored && (chat.remotePresent === false || chat.localOnly),
+  );
 
   if (archived.length === 0) {
     results.innerHTML = `<div class="empty">${t("sidebar.empty")}</div>`;
@@ -83,14 +93,18 @@ async function paint() {
 
   archived.sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""));
 
-  results.innerHTML = archived.map(chat => `
+  results.innerHTML = archived
+    .map(
+      (chat) => `
     <div class="chat-item" data-id="${escapeHtml(chat.id)}">
       <div class="chat-header">
         <p class="chat-title" title="${escapeHtml(chat.title || "Untitled")}">${escapeHtml(chat.title || "Untitled")}</p>
         <button class="restore-btn" data-action="restore">Restore</button>
       </div>
     </div>
-  `).join("");
+  `,
+    )
+    .join("");
 
   return origin;
 }
@@ -110,7 +124,9 @@ backupBtn.addEventListener("click", async () => {
   backupBtn.textContent = "Running...";
   backupBtn.disabled = true;
   try {
-    const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
+    const res = await chrome.runtime.sendMessage({
+      type: "canchat-page-loaded",
+    });
     if (!res?.ok) throw new Error(res?.error || "Backup failed.");
     await updateAndRender();
   } catch (error) {
@@ -136,7 +152,7 @@ results.addEventListener("click", async (event) => {
 
   try {
     const chats = await getAllChats(origin);
-    const chat = chats.find(c => String(c.id) === String(id));
+    const chat = chats.find((c) => String(c.id) === String(id));
     if (!chat) throw new Error("Chat not found in archive");
 
     const created = await restoreChat(origin, chat);

@@ -1,7 +1,12 @@
 import { fetchChatDetail, fetchChatList } from "./api.js";
 import { stringIdFromChatLike } from "./chatIds.js";
 import { putChat, putSearchDoc, getChatsByOrigin, putSyncMeta } from "./db.js";
-import { ensureConfiguredOriginPermission, getSettings, originFromBaseUrl, updateSettings } from "./settings.js";
+import {
+  ensureConfiguredOriginPermission,
+  getSettings,
+  originFromBaseUrl,
+  updateSettings,
+} from "./settings.js";
 
 const runningByOrigin = new Set();
 const queuedByOrigin = new Set();
@@ -29,7 +34,11 @@ export async function runBackupOnce(origin, deps = {}) {
     try {
       const detail = await apiFetchChatDetail(id);
       // Get timestamp, handling both camelCase and snake_case.
-      let ts = detail.updatedAt || detail.updated_at || item.updatedAt || item.updated_at;
+      let ts =
+        detail.updatedAt ||
+        detail.updated_at ||
+        item.updatedAt ||
+        item.updated_at;
       // If the timestamp is in seconds (10 digits), convert to milliseconds for JS Dates.
       if (typeof ts === "number" && ts < 2000000000) ts = ts * 1000;
 
@@ -68,23 +77,52 @@ export async function runBackupOnce(origin, deps = {}) {
   await writeSyncMeta({ key: `last_sync:${origin}`, origin, at: completedAt });
   await saveSettings({ lastSyncAt: completedAt });
 
-  return { ok: true, syncedCount, failedCount: failures.length, failures, completedAt };
+  return {
+    ok: true,
+    syncedCount,
+    failedCount: failures.length,
+    failures,
+    completedAt,
+  };
 }
 
 export async function backupOrigin(origin) {
-  return runQueuedBackup(origin, runBackupOnce, runningByOrigin, queuedByOrigin);
+  return runQueuedBackup(
+    origin,
+    runBackupOnce,
+    runningByOrigin,
+    queuedByOrigin,
+  );
 }
 
-export async function runQueuedBackup(origin, runner, running = new Set(), queued = new Set()) {
+export async function runQueuedBackup(
+  origin,
+  runner,
+  running = new Set(),
+  queued = new Set(),
+) {
   if (running.has(origin)) {
     queued.add(origin);
-    return { ok: true, queued: true, syncedCount: 0, failedCount: 0, failures: [], completedAt: null };
+    return {
+      ok: true,
+      queued: true,
+      syncedCount: 0,
+      failedCount: 0,
+      failures: [],
+      completedAt: null,
+    };
   }
 
   running.add(origin);
   try {
     const result = await runner(origin);
-    chrome.runtime.sendMessage({ type: "sync-completed", timestamp: result.completedAt, result }).catch?.(() => {});
+    chrome.runtime
+      .sendMessage({
+        type: "sync-completed",
+        timestamp: result.completedAt,
+        result,
+      })
+      .catch?.(() => {});
     return result;
   } finally {
     running.delete(origin);
@@ -143,10 +181,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name === "canchat-sync-poll") {
     const settings = await getSettings();
     if (!settings.enabled || !settings.baseUrl) return;
-    
+
     const origin = originFromBaseUrl(settings.baseUrl);
     const canchatTabs = await chrome.tabs.query({ url: `${origin}/*` });
-    
+
     // Only run the backup if they actually have a CanChat tab open right now
     if (canchatTabs.length > 0) {
       backupOrigin(origin).catch(() => {});
@@ -160,9 +198,9 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (changeInfo.url || changeInfo.status === "complete") {
     const settings = await getSettings();
     if (!settings.enabled || !settings.baseUrl) return;
-    
+
     const origin = originFromBaseUrl(settings.baseUrl);
-    
+
     if (tab.url && tab.url.startsWith(origin)) {
       // User navigated around inside CanChat
       backupOrigin(origin).catch(() => {});
@@ -177,25 +215,26 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 chrome.tabs.onActivated.addListener(async () => {
   const settings = await getSettings();
   if (!settings.enabled || !settings.baseUrl) return;
-  
+
   const origin = originFromBaseUrl(settings.baseUrl);
   const canchatTabs = await chrome.tabs.query({ url: `${origin}/*` });
-  
+
   // If they click away, save the state of their current CanChat tabs
   if (canchatTabs.length > 0) {
     backupOrigin(origin).catch(() => {});
   }
 });
 
-
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type === "canchat-page-loaded") {
     (async () => {
       try {
         const settings = await getSettings();
-        if (!settings.enabled || !settings.baseUrl) return sendResponse({ ok: true, skipped: true });
+        if (!settings.enabled || !settings.baseUrl)
+          return sendResponse({ ok: true, skipped: true });
         const permission = await ensureConfiguredOriginPermission();
-        if (!permission.ok) return sendResponse({ ok: false, error: permission.reason });
+        if (!permission.ok)
+          return sendResponse({ ok: false, error: permission.reason });
         const result = await backupOrigin(originFromBaseUrl(settings.baseUrl));
         sendResponse(result);
       } catch (error) {

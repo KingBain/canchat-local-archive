@@ -1,5 +1,10 @@
 import { createChat } from "./api.js";
-import { getChatsByOrigin, originIdKey, putRestoreMapping, withStore } from "./db.js";
+import {
+  getChatsByOrigin,
+  originIdKey,
+  putRestoreMapping,
+  withStore,
+} from "./db.js";
 
 export function remoteIdFromCreateResponse(created) {
   return created?.id || created?.chatId || created?.chat?.id || null;
@@ -7,13 +12,19 @@ export function remoteIdFromCreateResponse(created) {
 
 export function buildRestorePayload(chat) {
   const oldDetail = chat.detail || {};
-  const sourceChat = oldDetail?.chat && typeof oldDetail.chat === "object" ? oldDetail.chat : oldDetail;
+  const sourceChat =
+    oldDetail?.chat && typeof oldDetail.chat === "object"
+      ? oldDetail.chat
+      : oldDetail;
   const normalizedChat = {
     ...sourceChat,
     messages: Array.isArray(sourceChat?.messages) ? sourceChat.messages : [],
-    history: (sourceChat?.history && typeof sourceChat.history === "object" && !Array.isArray(sourceChat.history))
-      ? sourceChat.history
-      : { messages: {}, currentId: null },
+    history:
+      sourceChat?.history &&
+      typeof sourceChat.history === "object" &&
+      !Array.isArray(sourceChat.history)
+        ? sourceChat.history
+        : { messages: {}, currentId: null },
     models: Array.isArray(sourceChat?.models) ? sourceChat.models : [],
   };
 
@@ -36,7 +47,9 @@ export async function restoreChat(origin, chat, deps = {}) {
   const created = await apiCreateChat(payload);
   const remoteId = remoteIdFromCreateResponse(created);
   if (!remoteId) {
-    throw new Error("Restore succeeded, but the server did not return a new chat ID.");
+    throw new Error(
+      "Restore succeeded, but the server did not return a new chat ID.",
+    );
   }
 
   const restoredAt = new Date().toISOString();
@@ -86,9 +99,19 @@ export async function restoreAll(origin) {
     if (chat.remotePresent) continue;
     try {
       const restored = await restoreChat(origin, chat);
-      results.push({ id: chat.id, restored: true, mode: "full", remoteId: restored.remoteId });
+      results.push({
+        id: chat.id,
+        restored: true,
+        mode: "full",
+        remoteId: restored.remoteId,
+      });
     } catch (error) {
-      results.push({ id: chat.id, restored: false, mode: "archive-fallback", error: error.message });
+      results.push({
+        id: chat.id,
+        restored: false,
+        mode: "archive-fallback",
+        error: error.message,
+      });
     }
   }
 

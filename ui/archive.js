@@ -4,19 +4,26 @@ import { fetchChatList } from "../src/api.js";
 import { stringIdFromChatLike } from "../src/chatIds.js";
 import { getSettings, originFromBaseUrl } from "../src/settings.js";
 import { getI18nContext } from "../src/i18n.js";
-import { escapeHtml, extractPlainText, generateSnippet } from "../src/chatText.js";
+import {
+  escapeHtml,
+  extractPlainText,
+  generateSnippet,
+} from "../src/chatText.js";
 import { restoreChat } from "../src/restore.js";
 
 const app = globalThis.document?.querySelector?.("#app") || null;
 
 async function getChats(origin) {
-  return withStore("chats", "readonly", (store) =>
-    new Promise((resolve, reject) => {
-      const idx = store.index("by_origin");
-      const r = idx.getAll(origin);
-      r.onsuccess = () => resolve(r.result || []);
-      r.onerror = () => reject(r.error);
-    })
+  return withStore(
+    "chats",
+    "readonly",
+    (store) =>
+      new Promise((resolve, reject) => {
+        const idx = store.index("by_origin");
+        const r = idx.getAll(origin);
+        r.onsuccess = () => resolve(r.result || []);
+        r.onerror = () => reject(r.error);
+      }),
   );
 }
 
@@ -41,7 +48,10 @@ export function applyRestoredArchiveChat(chats, chat, restored) {
     remotePresent: true,
   };
 
-  const index = chats.findIndex((candidate) => candidate === chat || String(candidate.id) === String(restored.localId));
+  const index = chats.findIndex(
+    (candidate) =>
+      candidate === chat || String(candidate.id) === String(restored.localId),
+  );
   if (index >= 0) chats.splice(index, 1, updated);
   return updated;
 }
@@ -51,7 +61,9 @@ async function reconcileRemotePresence(chats) {
 
   try {
     const remoteChats = await fetchChatList();
-    const remoteIds = new Set(remoteChats.map(stringIdFromChatLike).filter(Boolean));
+    const remoteIds = new Set(
+      remoteChats.map(stringIdFromChatLike).filter(Boolean),
+    );
 
     await Promise.all(
       chats.map(async (chat) => {
@@ -75,9 +87,11 @@ async function reconcileRemotePresence(chats) {
         }
 
         if (changed) {
-          await withStore("chats", "readwrite", (store) => store.put({ ...chat, id: String(chat.id) }));
+          await withStore("chats", "readwrite", (store) =>
+            store.put({ ...chat, id: String(chat.id) }),
+          );
         }
-      })
+      }),
     );
   } catch {
     // Keep last known status on network or auth failures.
@@ -110,7 +124,7 @@ async function render() {
   }
 
   const chats = await getChats(origin);
-  
+
   // Pre-calculate plain text once so search is lightning fast
   for (const chat of chats) {
     chat._plainText = extractPlainText(chat);
@@ -143,7 +157,7 @@ async function render() {
     const filtered = chats.filter((chat) => {
       const status = statusOf(chat);
       if (f !== "all" && status !== f) return false;
-      
+
       // Search through Title and actual message Plain Text instead of raw JSON!
       const hay = `${chat.title || ""} ${chat._plainText}`.toLowerCase();
       return !q || hay.includes(q);
@@ -155,10 +169,11 @@ async function render() {
         const status = statusOf(chat);
         const snippetText = generateSnippet(chat._plainText, q);
         const formattedDate = new Date(chat.updatedAt).toLocaleString(); // Format ugly date string
-        const primaryAction = primaryArchiveAction(chat) === "open"
-          ? '<button data-action="open">Open</button>'
-          : '<button data-action="restore-open">Restore/Open</button>';
-        
+        const primaryAction =
+          primaryArchiveAction(chat) === "open"
+            ? '<button data-action="open">Open</button>'
+            : '<button data-action="restore-open">Restore/Open</button>';
+
         return `
           <article class="card" data-id="${escapeHtml(chat.id)}">
             <h3>${escapeHtml(chat.title || "Untitled")}</h3>
@@ -192,7 +207,9 @@ async function render() {
       try {
         button.textContent = "Restoring...";
         button.disabled = true;
-        const created = chat.remotePresent ? { remoteId: chat.id } : await restoreChat(origin, chat);
+        const created = chat.remotePresent
+          ? { remoteId: chat.id }
+          : await restoreChat(origin, chat);
         const remoteId = created?.remoteId || chat.id;
         const url = `${settings.baseUrl.replace(/\/$/, "")}/c/${encodeURIComponent(remoteId)}`;
         chrome.tabs.create({ url });

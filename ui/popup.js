@@ -1,5 +1,11 @@
 import { discoverEndpoints } from "../src/api.js";
-import { getChatsByOrigin, exportFullDatabase, importFullDatabase, originIdKey, withStore } from "../src/db.js";
+import {
+  getChatsByOrigin,
+  exportFullDatabase,
+  importFullDatabase,
+  originIdKey,
+  withStore,
+} from "../src/db.js";
 import { exportAllChatsJson } from "../src/export.js";
 import {
   ensureConfiguredOriginPermission,
@@ -16,7 +22,9 @@ const app = document.querySelector("#app");
 function formatDate(value) {
   if (!value) return window.__t("common.never");
   const d = new Date(value);
-  return Number.isNaN(d.valueOf()) ? window.__t("common.unknown") : d.toLocaleString();
+  return Number.isNaN(d.valueOf())
+    ? window.__t("common.unknown")
+    : d.toLocaleString();
 }
 
 function downloadText(name, text, type = "application/json") {
@@ -71,7 +79,7 @@ async function render() {
   chrome.runtime.onMessage.addListener((message) => {
     if (message.type === "sync-completed") {
       // Force a re-render of the popup when a sync finishes
-      render(); 
+      render();
     }
   });
 
@@ -105,7 +113,7 @@ async function render() {
     <section class="card">
       <h2>${t("popup.language")}</h2>
       <select id="locale-select">
-        ${locales.map(code => `<option value="${code}" ${code===locale?"selected":""}>${code.toUpperCase()}</option>`).join("")}
+        ${locales.map((code) => `<option value="${code}" ${code === locale ? "selected" : ""}>${code.toUpperCase()}</option>`).join("")}
       </select>
     </section>
   `;
@@ -144,24 +152,35 @@ async function render() {
     if (target.id === "backup-btn") {
       try {
         target.disabled = true;
-        const res = await chrome.runtime.sendMessage({ type: "canchat-page-loaded" });
+        const res = await chrome.runtime.sendMessage({
+          type: "canchat-page-loaded",
+        });
         if (!res?.ok) throw new Error(res?.error || "Backup failed.");
         await updateSettings({ lastSyncAt: new Date().toISOString() });
         setMessage(actionMsg, t("popup.msg.backupCompleted"), "success");
         await render();
-      } catch (err) { setMessage(actionMsg, err.message, "error"); }
-      finally { target.disabled = false; }
+      } catch (err) {
+        setMessage(actionMsg, err.message, "error");
+      } finally {
+        target.disabled = false;
+      }
     }
 
-    if (target.id === "open-archive-btn") chrome.tabs.create({ url: chrome.runtime.getURL("ui/archive.html") });
+    if (target.id === "open-archive-btn")
+      chrome.tabs.create({ url: chrome.runtime.getURL("ui/archive.html") });
 
     if (target.id === "export-json-btn") {
       try {
         const p = await ensureConfiguredOriginPermission();
         if (!p.ok) throw new Error(p.reason);
-        downloadText(`canchat-archive-${Date.now()}.json`, await exportAllChatsJson(p.origin));
+        downloadText(
+          `canchat-archive-${Date.now()}.json`,
+          await exportAllChatsJson(p.origin),
+        );
         setMessage(actionMsg, t("popup.msg.exported"), "success");
-      } catch (err) { setMessage(actionMsg, err.message, "error"); }
+      } catch (err) {
+        setMessage(actionMsg, err.message, "error");
+      }
     }
 
     if (target.id === "delete-btn") {
@@ -175,10 +194,13 @@ async function render() {
         setMessage(dbMsg, t("popup.msg.genBackup"), "info");
         downloadText(`backup-${Date.now()}.json`, await exportFullDatabase());
         setMessage(dbMsg, t("popup.msg.dbDownloadOk"), "success");
-      } catch (err) { setMessage(dbMsg, err.message, "error"); }
+      } catch (err) {
+        setMessage(dbMsg, err.message, "error");
+      }
     }
 
-    if (target.id === "import-db-btn") document.querySelector("#import-file").click();
+    if (target.id === "import-db-btn")
+      document.querySelector("#import-file").click();
   };
 
   // --- LANGUAGE HANDLER ---
@@ -195,7 +217,9 @@ async function render() {
       setMessage(document.querySelector("#db-msg"), "Importing...", "info");
       await importFullDatabase(await file.text());
       await render();
-    } catch (err) { setMessage(document.querySelector("#db-msg"), "Import failed", "error"); }
+    } catch (err) {
+      setMessage(document.querySelector("#db-msg"), "Import failed", "error");
+    }
   };
 }
 

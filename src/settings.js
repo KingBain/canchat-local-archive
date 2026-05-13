@@ -28,7 +28,9 @@ export function normalizeBaseUrl(input) {
     url.hostname === "[::1]";
 
   if (url.protocol !== "https:" && !(isLocalhost && url.protocol === "http:")) {
-    throw new Error("Base URL must use HTTPS (HTTP allowed for localhost only).");
+    throw new Error(
+      "Base URL must use HTTPS (HTTP allowed for localhost only).",
+    );
   }
 
   return `${url.protocol}//${url.host}`;

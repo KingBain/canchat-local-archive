@@ -7,7 +7,9 @@ function installChromeMock() {
       onRemoved: { addListener() {} },
       onUpdated: { addListener() {} },
       onActivated: { addListener() {} },
-      async query() { return []; },
+      async query() {
+        return [];
+      },
     },
     windows: { onRemoved: { addListener() {} } },
     alarms: {
@@ -17,10 +19,26 @@ function installChromeMock() {
     runtime: {
       onInstalled: { addListener() {} },
       onMessage: { addListener() {} },
-      sendMessage() { return Promise.resolve(); },
+      sendMessage() {
+        return Promise.resolve();
+      },
     },
-    storage: { local: { async get() { return {}; }, async set() {} } },
-    permissions: { async contains() { return true; }, async request() { return true; } },
+    storage: {
+      local: {
+        async get() {
+          return {};
+        },
+        async set() {},
+      },
+    },
+    permissions: {
+      async contains() {
+        return true;
+      },
+      async request() {
+        return true;
+      },
+    },
   };
 }
 
@@ -38,11 +56,18 @@ test("runBackupOnce records per-chat failures and still updates successful recor
     fetchChatList: async () => [{ id: "ok" }, { id: "bad" }],
     fetchChatDetail: async (id) => {
       if (id === "bad") throw new Error("detail failed");
-      return { id, title: "Good", updatedAt: "2026-05-11T00:00:00.000Z", messages: [] };
+      return {
+        id,
+        title: "Good",
+        updatedAt: "2026-05-11T00:00:00.000Z",
+        messages: [],
+      };
     },
     putChat: async (chat) => putChats.push({ ...chat }),
     putSearchDoc: async (doc) => putSearchDocs.push({ ...doc }),
-    getChatsByOrigin: async () => [{ id: "stale", origin: "https://chat.example.com", remotePresent: true }],
+    getChatsByOrigin: async () => [
+      { id: "stale", origin: "https://chat.example.com", remotePresent: true },
+    ],
     putSyncMeta: async () => {},
     updateSettings: async () => {},
   });
@@ -60,16 +85,17 @@ test("runBackupOnce does not mark local chats deleted when list fetch fails", as
   let readLocal = false;
 
   await assert.rejects(
-    () => runBackupOnce("https://chat.example.com", {
-      fetchChatList: async () => {
-        throw new Error("list failed");
-      },
-      getChatsByOrigin: async () => {
-        readLocal = true;
-        return [];
-      },
-    }),
-    /list failed/
+    () =>
+      runBackupOnce("https://chat.example.com", {
+        fetchChatList: async () => {
+          throw new Error("list failed");
+        },
+        getChatsByOrigin: async () => {
+          readLocal = true;
+          return [];
+        },
+      }),
+    /list failed/,
   );
   assert.equal(readLocal, false);
 });
@@ -87,11 +113,27 @@ test("runQueuedBackup queues one rerun when a backup is already active", async (
   const runner = async () => {
     calls.push("run");
     if (calls.length === 1) await firstRun;
-    return { ok: true, syncedCount: 0, failedCount: 0, failures: [], completedAt: new Date().toISOString() };
+    return {
+      ok: true,
+      syncedCount: 0,
+      failedCount: 0,
+      failures: [],
+      completedAt: new Date().toISOString(),
+    };
   };
 
-  const active = runQueuedBackup("https://chat.example.com", runner, running, queued);
-  const queuedResult = await runQueuedBackup("https://chat.example.com", runner, running, queued);
+  const active = runQueuedBackup(
+    "https://chat.example.com",
+    runner,
+    running,
+    queued,
+  );
+  const queuedResult = await runQueuedBackup(
+    "https://chat.example.com",
+    runner,
+    running,
+    queued,
+  );
   assert.equal(queuedResult.queued, true);
   assert.equal(calls.length, 1);
 

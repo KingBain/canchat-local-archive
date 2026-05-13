@@ -42,7 +42,10 @@ export function extractMessages(chat) {
     }
 
     const role = node.role || node.author || node.sender || node.type;
-    const hasMessageContent = Object.prototype.hasOwnProperty.call(node, "content") || Object.prototype.hasOwnProperty.call(node, "text") || Object.prototype.hasOwnProperty.call(node, "parts");
+    const hasMessageContent =
+      Object.prototype.hasOwnProperty.call(node, "content") ||
+      Object.prototype.hasOwnProperty.call(node, "text") ||
+      Object.prototype.hasOwnProperty.call(node, "parts");
     if (role && hasMessageContent) {
       const content = stringifyContent(node.content ?? node.text ?? node.parts);
       if (content) {
@@ -69,7 +72,13 @@ export function extractMessages(chat) {
 }
 
 export function toMarkdown(chat) {
-  const lines = [`# ${chat.title || "Untitled"}`, "", `- Chat ID: ${chat.id}`, `- Updated: ${chat.updatedAt || ""}`, ""];
+  const lines = [
+    `# ${chat.title || "Untitled"}`,
+    "",
+    `- Chat ID: ${chat.id}`,
+    `- Updated: ${chat.updatedAt || ""}`,
+    "",
+  ];
   const messages = extractMessages(chat);
   for (const m of messages) {
     lines.push(`## ${m.role || "message"}`);
@@ -89,5 +98,9 @@ export async function exportChatMarkdown(origin, chatId) {
 
 export async function exportAllChatsJson(origin) {
   const chats = await getChatsByOrigin(origin);
-  return JSON.stringify({ origin, exportedAt: new Date().toISOString(), chats }, null, 2);
+  return JSON.stringify(
+    { origin, exportedAt: new Date().toISOString(), chats },
+    null,
+    2,
+  );
 }

@@ -1,9 +1,16 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { escapeHtml, extractPlainText, generateSnippet } from "../src/chatText.js";
+import {
+  escapeHtml,
+  extractPlainText,
+  generateSnippet,
+} from "../src/chatText.js";
 
 test("escapeHtml protects HTML inserted into templates", () => {
-  assert.equal(escapeHtml('<img src=x onerror="alert(1)">'), "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;");
+  assert.equal(
+    escapeHtml('<img src=x onerror="alert(1)">'),
+    "&lt;img src=x onerror=&quot;alert(1)&quot;&gt;",
+  );
 });
 
 test("extractPlainText collects nested message content and deduplicates", () => {

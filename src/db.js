@@ -9,12 +9,16 @@ function createChatsStore(db) {
   const chats = db.createObjectStore("chats", { keyPath: ["origin", "id"] });
   chats.createIndex("by_origin", "origin", { unique: false });
   chats.createIndex("by_updated_at", "updatedAt", { unique: false });
-  chats.createIndex("by_origin_updated", ["origin", "updatedAt"], { unique: false });
+  chats.createIndex("by_origin_updated", ["origin", "updatedAt"], {
+    unique: false,
+  });
   return chats;
 }
 
 function createSearchDocsStore(db) {
-  const searchDocs = db.createObjectStore("search_docs", { keyPath: ["origin", "id"] });
+  const searchDocs = db.createObjectStore("search_docs", {
+    keyPath: ["origin", "id"],
+  });
   searchDocs.createIndex("by_origin", "origin", { unique: false });
   searchDocs.createIndex("by_title", "titleLower", { unique: false });
   searchDocs.createIndex("by_content", "contentLower", { unique: false });
@@ -22,7 +26,9 @@ function createSearchDocsStore(db) {
 }
 
 function createRestoreMappingsStore(db) {
-  const restoreMappings = db.createObjectStore("restore_mappings", { keyPath: "localId" });
+  const restoreMappings = db.createObjectStore("restore_mappings", {
+    keyPath: "localId",
+  });
   restoreMappings.createIndex("by_remote_id", "remoteId", { unique: false });
   restoreMappings.createIndex("by_origin", "origin", { unique: false });
   return restoreMappings;
@@ -69,7 +75,12 @@ function openDb() {
 
       if (event.oldVersion < 2 && event.oldVersion >= 1) {
         migrateStoreToCompositeKey(db, tx, "chats", createChatsStore);
-        migrateStoreToCompositeKey(db, tx, "search_docs", createSearchDocsStore);
+        migrateStoreToCompositeKey(
+          db,
+          tx,
+          "search_docs",
+          createSearchDocsStore,
+        );
       }
     };
     req.onsuccess = () => resolve(req.result);
@@ -116,7 +127,9 @@ export async function withStore(name, mode, fn) {
 }
 
 export async function putChat(chat) {
-  return withStore("chats", "readwrite", (store) => promisify(store.put({ ...chat, id: String(chat.id) })));
+  return withStore("chats", "readwrite", (store) =>
+    promisify(store.put({ ...chat, id: String(chat.id) })),
+  );
 }
 
 export async function getChatsByOrigin(origin) {
@@ -127,7 +140,9 @@ export async function getChatsByOrigin(origin) {
 }
 
 export async function putSearchDoc(doc) {
-  return withStore("search_docs", "readwrite", (store) => promisify(store.put({ ...doc, id: String(doc.id) })));
+  return withStore("search_docs", "readwrite", (store) =>
+    promisify(store.put({ ...doc, id: String(doc.id) })),
+  );
 }
 
 export async function getAllSearchDocs(origin) {
@@ -138,11 +153,15 @@ export async function getAllSearchDocs(origin) {
 }
 
 export async function putRestoreMapping(mapping) {
-  return withStore("restore_mappings", "readwrite", (store) => promisify(store.put(mapping)));
+  return withStore("restore_mappings", "readwrite", (store) =>
+    promisify(store.put(mapping)),
+  );
 }
 
 export async function putSyncMeta(entry) {
-  return withStore("sync_meta", "readwrite", (store) => promisify(store.put(entry)));
+  return withStore("sync_meta", "readwrite", (store) =>
+    promisify(store.put(entry)),
+  );
 }
 
 export async function exportFullDatabase() {
@@ -159,12 +178,16 @@ export async function exportFullDatabase() {
     });
   }
   db.close();
-  
-  return JSON.stringify({ 
-    version: DB_VERSION, 
-    exportedAt: new Date().toISOString(), 
-    data 
-  }, null, 2);
+
+  return JSON.stringify(
+    {
+      version: DB_VERSION,
+      exportedAt: new Date().toISOString(),
+      data,
+    },
+    null,
+    2,
+  );
 }
 
 export async function importFullDatabase(jsonData) {
@@ -179,7 +202,7 @@ export async function importFullDatabase(jsonData) {
   return new Promise((resolve, reject) => {
     // Open a single transaction for all stores
     const tx = db.transaction(stores, "readwrite");
-    
+
     tx.oncomplete = () => {
       db.close();
       resolve();
@@ -191,7 +214,10 @@ export async function importFullDatabase(jsonData) {
       if (Array.isArray(parsed.data[storeName])) {
         const store = tx.objectStore(storeName);
         for (const item of parsed.data[storeName]) {
-          if ((storeName === "chats" || storeName === "search_docs") && item?.id != null) {
+          if (
+            (storeName === "chats" || storeName === "search_docs") &&
+            item?.id != null
+          ) {
             store.put({ ...item, id: String(item.id) });
           } else {
             store.put(item);

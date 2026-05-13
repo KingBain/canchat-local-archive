@@ -1,17 +1,22 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { applyRestoredArchiveChat, primaryArchiveAction } from "../ui/archive.js";
+import {
+  applyRestoredArchiveChat,
+  primaryArchiveAction,
+} from "../ui/archive.js";
 
 test("restored archive chats switch from restore to open without keeping stale local ids", () => {
-  const chats = [{
-    id: "local-1",
-    title: "Archived chat",
-    updatedAt: "2026-05-11T00:00:00.000Z",
-    restored: false,
-    localOnly: true,
-    remotePresent: false,
-    _plainText: "saved conversation",
-  }];
+  const chats = [
+    {
+      id: "local-1",
+      title: "Archived chat",
+      updatedAt: "2026-05-11T00:00:00.000Z",
+      restored: false,
+      localOnly: true,
+      remotePresent: false,
+      _plainText: "saved conversation",
+    },
+  ];
 
   assert.equal(primaryArchiveAction(chats[0]), "restore-open");
 
