@@ -1,6 +1,7 @@
 :root {
   color-scheme: light dark;
 }
+
 body {
   margin: 0;
   font-family: Inter, system-ui, sans-serif;
@@ -20,6 +21,7 @@ header {
   top: 0;
   z-index: 10;
 }
+
 h3 {
   margin: 0;
   font-size: 15px;
@@ -36,9 +38,11 @@ h3 {
   font-size: 12px;
   font-weight: 500;
 }
+
 .header-btn:hover:not(:disabled) {
   background: #374151;
 }
+
 .header-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -47,6 +51,7 @@ h3 {
 #app {
   padding: 16px;
 }
+
 .chat-item {
   border: 1px solid #374151;
   border-radius: 8px;
@@ -63,6 +68,7 @@ h3 {
   gap: 10px;
   margin-bottom: 6px;
 }
+
 .chat-title {
   font-size: 13px;
   font-weight: 600;
@@ -73,6 +79,7 @@ h3 {
   overflow: hidden;
   flex: 1;
 }
+
 .chat-meta {
   font-size: 11px;
   color: #94a3b8;
@@ -90,9 +97,11 @@ button.restore-btn {
   font-weight: 500;
   white-space: nowrap;
 }
+
 button.restore-btn:hover:not(:disabled) {
   background: #4f46e5;
 }
+
 button.restore-btn:disabled {
   background: #374151;
   border-color: #4b5563;

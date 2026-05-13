@@ -6,6 +6,7 @@
   --accent: #6366f1;
   --danger: #ef4444;
 }
+
 body {
   font-family: "Segoe UI", system-ui, sans-serif;
   margin: 0;
@@ -13,6 +14,7 @@ body {
   background: var(--bg-primary);
   color: var(--text-main);
 }
+
 #app {
   padding: 16px;
   display: flex;
@@ -27,6 +29,7 @@ h2 {
   margin: 0 0 8px;
   letter-spacing: 0.05em;
 }
+
 .card {
   background: var(--bg-card);
   border-radius: 12px;
@@ -45,6 +48,7 @@ select {
   border-radius: 6px;
   box-sizing: border-box;
 }
+
 .row {
   display: flex;
   gap: 8px;
@@ -57,6 +61,7 @@ select {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
+
 button {
   cursor: pointer;
   padding: 8px;
@@ -68,31 +73,39 @@ button {
   color: white;
   transition: 0.2s;
 }
+
 button:hover {
   background: #475569;
 }
+
 button.primary {
   background: var(--accent);
 }
+
 button.danger {
   background: #7f1d1d;
 }
+
 button.danger:hover {
   background: #991b1b;
 }
+
 button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
   border: 1px solid var(--text-muted);
 }
+
 button.loading {
   position: relative;
   pointer-events: none;
 }
+
 button.loading::after {
   content: " ...";
   animation: blink 1s infinite;
 }
+
 @keyframes blink {
   50% {
     opacity: 0;
@@ -106,12 +119,14 @@ button.loading::after {
   margin: 0;
   font-size: 12px;
 }
+
 .stats-list li {
   display: flex;
   justify-content: space-between;
   padding: 4px 0;
   border-bottom: 1px solid #334155;
 }
+
 .governance {
   font-size: 10px;
   color: var(--text-muted);
