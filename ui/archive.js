@@ -1,3 +1,5 @@
+/* global chrome */
+
 import { originIdKey, withStore } from "../src/db.js";
 import { exportChatMarkdown } from "../src/export.js";
 import { fetchChatList } from "../src/api.js";

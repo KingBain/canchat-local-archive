@@ -1,3 +1,5 @@
+/* global chrome */
+
 import { withStore } from "../src/db.js";
 import { fetchChatList } from "../src/api.js";
 import { stringIdFromChatLike } from "../src/chatIds.js";
