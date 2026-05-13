@@ -1,3 +1,5 @@
+/* global chrome */
+
 import { discoverEndpoints } from "../src/api.js";
 import {
   getChatsByOrigin,
@@ -217,9 +219,7 @@ async function render() {
       setMessage(document.querySelector("#db-msg"), "Importing...", "info");
       await importFullDatabase(await file.text());
       await render();
-    } catch (err) {
-      setMessage(document.querySelector("#db-msg"), "Import failed", "error");
-    }
+    } catch { setMessage(document.querySelector("#db-msg"), "Import failed", "error"); }
   };
 }
 

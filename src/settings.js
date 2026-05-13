@@ -1,3 +1,5 @@
+/* global chrome */
+
 const SETTINGS_KEY = "settings";
 
 const DEFAULT_SETTINGS = {
