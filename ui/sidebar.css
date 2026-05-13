@@ -39,13 +39,13 @@ h3 {
   font-weight: 500;
 }
 
-.header-btn:hover:not(:disabled) {
-  background: #374151;
-}
-
 .header-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.header-btn:hover:not(:disabled) {
+  background: #374151;
 }
 
 #app {
@@ -98,15 +98,15 @@ button.restore-btn {
   white-space: nowrap;
 }
 
-button.restore-btn:hover:not(:disabled) {
-  background: #4f46e5;
-}
-
 button.restore-btn:disabled {
   background: #374151;
   border-color: #4b5563;
   color: #9ca3af;
   cursor: not-allowed;
+}
+
+button.restore-btn:hover:not(:disabled) {
+  background: #4f46e5;
 }
 
 .empty {
