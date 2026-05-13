@@ -3,8 +3,6 @@ name: Code Linting
 
 on:
   pull_request:
-    branches:
-      - develop
 
 permissions: read-all
 
