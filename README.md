@@ -6,7 +6,7 @@
 
 A Chrome/Edge browser extension that automatically archives, searches, and restores your conversations from **CANChat** and **Open WebUI** environments.
 
-Because many enterprise and government AI chat instances have strict data retention policies or periodically delete old conversations, this extension acts as your personal, local safety net. It saves your chats directly to your browser's localstorage and allows you to restore them to the server at any time.
+Because many enterprise and government AI chat instances have strict data retention policies or periodically delete old conversations, this extension acts as your personal, local safety net. It saves your chats directly to your browser's localStorage and allows you to restore them to the server at any time.
 
 ## 🌟 Features
 
