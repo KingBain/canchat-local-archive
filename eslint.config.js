@@ -23,11 +23,7 @@ export default [
     },
     rules: {
       "no-undef": "error",
-<<<<<<< fix-release-pipeline
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-=======
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
->>>>>>> main
     },
   },
   {
@@ -42,11 +38,7 @@ export default [
     },
     rules: {
       "no-undef": "error",
-<<<<<<< fix-release-pipeline
       "no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
-=======
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
->>>>>>> main
     },
   },
 ];
