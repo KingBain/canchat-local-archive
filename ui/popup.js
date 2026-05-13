@@ -219,7 +219,7 @@ async function render() {
       setMessage(document.querySelector("#db-msg"), "Importing...", "info");
       await importFullDatabase(await file.text());
       await render();
-    } catch (err) {
+    } catch {
       setMessage(document.querySelector("#db-msg"), "Import failed", "error");
     }
   };
