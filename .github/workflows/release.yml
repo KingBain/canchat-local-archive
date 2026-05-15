@@ -46,11 +46,11 @@ jobs:
         env:
           STEPS_RELEASE_OUTPUTS_TAG_NAME: ${{ steps.release.outputs.tag_name }}
 
-      - name: Upload extension ZIP to release
+
+      - name: Upload ZIP and Publish Release
         if: ${{ steps.release.outputs.release_created }}
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ steps.release.outputs.tag_name }}
-          files: ${{ env.ARCHIVE_NAME }}
-          draft: false
-          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release upload ${{ steps.release.outputs.tag_name }} ${{ env.ARCHIVE_NAME }}
+          gh release edit ${{ steps.release.outputs.tag_name }} --draft=false
