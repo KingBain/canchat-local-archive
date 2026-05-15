@@ -4,6 +4,13 @@
 
 # Changelog
 
+## [0.1.6](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.5...canchat-local-archive-v0.1.6) (2026-05-15)
+
+
+### Bug Fixes
+
+* force new package ([#37](https://github.com/KingBain/canchat-local-archive/issues/37)) ([86f3a94](https://github.com/KingBain/canchat-local-archive/commit/86f3a94376093e49f820a5d886e9f1326d6582fa))
+
 ## [0.1.5](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.4...canchat-local-archive-v0.1.5) (2026-05-15)
 
 
