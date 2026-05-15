@@ -1,7 +1,11 @@
-name: Coveralls
+name: Code Coverage
 
 on:
+  push:
+    branches: [ "main" ]
   pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   coveralls:
@@ -32,3 +36,4 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           file: coverage/lcov.info
+          parallel: false
