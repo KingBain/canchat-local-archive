@@ -1,5 +1,10 @@
 # CanChat Local Archive
 
+| Pipeline Status|
+| --- |
+|[![CI](https://github.com/KingBain/canchat-local-archive/actions/workflows/ci.yml/badge.svg)](https://github.com/KingBain/canchat-local-archive/actions/workflows/ci.yml) [![Release Please](https://github.com/KingBain/canchat-local-archive/actions/workflows/release.yml/badge.svg)](https://github.com/KingBain/canchat-local-archive/actions/workflows/release.yml) [![Coveralls](https://github.com/KingBain/canchat-local-archive/actions/workflows/coveralls.yml/badge.svg)](https://github.com/KingBain/canchat-local-archive/actions/workflows/coveralls.yml)  [![Coverage Status](https://coveralls.io/repos/github/KingBain/canchat-local-archive/badge.svg?branch=codex/fix-coveralls-action-for-pull-requests)](https://coveralls.io/github/KingBain/canchat-local-archive?branch=codex/fix-coveralls-action-for-pull-requests)|
+
+
 > **⚠️ DISCLAIMER: This is NOT an official Government of Canada project.** This is an independent, community-driven browser extension.
 >
 > _Note: The code for this project was heavily developed with the assistance of Large Language Models (LLMs)._
