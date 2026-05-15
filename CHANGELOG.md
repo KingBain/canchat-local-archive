@@ -4,6 +4,13 @@
 
 # Changelog
 
+## [0.1.4](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.3...canchat-local-archive-v0.1.4) (2026-05-15)
+
+
+### Bug Fixes
+
+* repair pipline action ([#33](https://github.com/KingBain/canchat-local-archive/issues/33)) ([f407ae0](https://github.com/KingBain/canchat-local-archive/commit/f407ae0d89c26b8262900ad5ba1ec25aba1b1929))
+
 ## [0.1.3](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.2...canchat-local-archive-v0.1.3) (2026-05-13)
 
 
