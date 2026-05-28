@@ -9,6 +9,7 @@ const DEFAULT_SETTINGS = {
   lastSyncAt: null,
   locale: "en",
   customLocales: {},
+  authTokens: {},
 };
 
 export function normalizeBaseUrl(input) {

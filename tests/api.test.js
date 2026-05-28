@@ -116,3 +116,113 @@ test("discoverEndpoints fails when every list candidate has an unknown shape", a
   );
   assert.equal(storage.settings.discoveredEndpoints, undefined);
 });
+
+function makeJwt(exp) {
+  const encode = (value) =>
+    Buffer.from(JSON.stringify(value))
+      .toString("base64url")
+      .replace(/=+$/, "");
+  return `${encode({ alg: "none", typ: "JWT" })}.${encode({ exp })}.sig`;
+}
+
+test("authFetch refreshes an expired cached JWT from an open CANChat tab", async () => {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const expiredToken = makeJwt(nowSeconds - 60);
+  const freshToken = makeJwt(nowSeconds + 3600);
+  const storage = installChromeStorage({
+    authTokens: {
+      "https://chat.example.com": {
+        token: expiredToken,
+        exp: nowSeconds - 60,
+      },
+    },
+  });
+  globalThis.chrome.tabs = {
+    async query() {
+      return [{ id: 123, active: true, lastAccessed: Date.now() }];
+    },
+  };
+  globalThis.chrome.scripting = {
+    async executeScript() {
+      return [
+        {
+          result: [
+            {
+              token: freshToken,
+              exp: nowSeconds + 3600,
+              source: "localStorage",
+              key: "authToken",
+            },
+          ],
+        },
+      ];
+    },
+  };
+
+  let authorization;
+  globalThis.fetch = async (_url, init = {}) => {
+    authorization = new Headers(init.headers).get("authorization");
+    return Response.json({ ok: true });
+  };
+
+  const { authFetch } = await importFreshApi();
+  await authFetch("https://chat.example.com", "/api/v1/chats");
+
+  assert.equal(authorization, `Bearer ${freshToken}`);
+  assert.equal(
+    storage.settings.authTokens["https://chat.example.com"].token,
+    freshToken,
+  );
+});
+
+test("authFetch retries once with a refreshed JWT after a 401", async () => {
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const oldToken = makeJwt(nowSeconds + 3600);
+  const freshToken = makeJwt(nowSeconds + 7200);
+  installChromeStorage({
+    authTokens: {
+      "https://chat.example.com": {
+        token: oldToken,
+        exp: nowSeconds + 3600,
+      },
+    },
+  });
+  globalThis.chrome.tabs = {
+    async query() {
+      return [{ id: 123, active: true, lastAccessed: Date.now() }];
+    },
+  };
+  globalThis.chrome.scripting = {
+    async executeScript() {
+      return [
+        {
+          result: [
+            {
+              token: freshToken,
+              exp: nowSeconds + 7200,
+              source: "sessionStorage",
+              key: "authToken",
+            },
+          ],
+        },
+      ];
+    },
+  };
+
+  const authorizations = [];
+  globalThis.fetch = async (_url, init = {}) => {
+    authorizations.push(new Headers(init.headers).get("authorization"));
+    if (authorizations.length === 1)
+      return new Response("expired", { status: 401 });
+    return Response.json({ ok: true });
+  };
+
+  const { authFetch } = await importFreshApi();
+  const response = await authFetch("https://chat.example.com", "/api/v1/chats");
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(authorizations, [
+    `Bearer ${oldToken}`,
+    `Bearer ${freshToken}`,
+  ]);
+});
