@@ -4,6 +4,13 @@
 
 # Changelog
 
+## [0.1.7](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.6...canchat-local-archive-v0.1.7) (2026-05-28)
+
+
+### Bug Fixes
+
+* Potential fix for code scanning alert no. 1: Workflow does not contain permissions ([#41](https://github.com/KingBain/canchat-local-archive/issues/41)) ([49bf051](https://github.com/KingBain/canchat-local-archive/commit/49bf05134292f41624837bf3eff773deaaecb5e2))
+
 ## [0.1.6](https://github.com/KingBain/canchat-local-archive/compare/canchat-local-archive-v0.1.5...canchat-local-archive-v0.1.6) (2026-05-15)
 
 
